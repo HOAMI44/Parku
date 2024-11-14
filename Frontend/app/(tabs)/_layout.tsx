@@ -1,37 +1,41 @@
-import { Tabs } from 'expo-router';
 import React from 'react';
-
-import { TabBarIcon } from '@/components/navigation/TabBarIcon';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { Tabs } from "expo-router";
+import { Ionicons } from '@expo/vector-icons';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-      }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon name={focused ? 'home' : 'home-outline'} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon name={focused ? 'code-slash' : 'code-slash-outline'} color={color} />
-          ),
-        }}
-      />
+    <Tabs screenOptions={{headerShown: false}}>
+      <Tabs.Screen name='index' options={{
+        title: 'Home',
+        tabBarIcon: ({color}) => (
+          <Ionicons name='home-outline' size={22} color={color} />
+        )
+      }} />
+      <Tabs.Screen name='explore' options={{
+        title: 'Explore',
+        tabBarIcon: ({color}) => (
+          <Ionicons name='search-outline' size={22} color={color} />
+        )
+      }} />
+      <Tabs.Screen name='notifications' options={{
+        title: 'Notification',
+        tabBarIcon: ({color}) => (
+          <Ionicons name='notifications-outline' size={22} color={color} />
+        )
+      }} />
+      <Tabs.Screen name='cart' options={{
+        title: 'Cart',
+        tabBarBadge: 3,
+        tabBarIcon: ({color}) => (
+          <Ionicons name='cart-outline' size={22} color={color} />
+        )
+      }} />
+      <Tabs.Screen name='profile' options={{
+        title: 'Profile',
+        tabBarIcon: ({color}) => (
+          <Ionicons name='person-outline' size={22} color={color} />
+        )
+      }} />
     </Tabs>
   );
 }
