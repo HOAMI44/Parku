@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
-    color: "blue",
+    color: "#ff9d00",
     fontWeight: '700',
     letterSpacing: 1.2,
     marginBottom: 5,
@@ -134,5 +134,5 @@ const styles = StyleSheet.create({
   },
   btnText: { fontSize: 14, fontWeight: '600', color: "black" },
   loginText: {marginTop: 30, fontSize: 14, color: "black",lineHeight: 24,},
-  loginTextSpan: {color:'blue',fontWeight:'600'},
+  loginTextSpan: {color:'#ff9d00',fontWeight:'600'},
 });
