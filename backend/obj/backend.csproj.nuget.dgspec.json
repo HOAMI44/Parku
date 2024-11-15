@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "D:\\FHV\\Parku\\backend\\backend.csproj": {}
+    "C:\\Users\\kilic\\Desktop\\ParkuV2\\Parku\\backend\\backend.csproj": {}
   },
   "projects": {
-    "D:\\FHV\\Parku\\backend\\backend.csproj": {
+    "C:\\Users\\kilic\\Desktop\\ParkuV2\\Parku\\backend\\backend.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "D:\\FHV\\Parku\\backend\\backend.csproj",
+        "projectUniqueName": "C:\\Users\\kilic\\Desktop\\ParkuV2\\Parku\\backend\\backend.csproj",
         "projectName": "backend",
-        "projectPath": "D:\\FHV\\Parku\\backend\\backend.csproj",
-        "packagesPath": "C:\\Users\\Fabi\\.nuget\\packages\\",
-        "outputPath": "D:\\FHV\\Parku\\backend\\obj\\",
+        "projectPath": "C:\\Users\\kilic\\Desktop\\ParkuV2\\Parku\\backend\\backend.csproj",
+        "packagesPath": "C:\\Users\\kilic\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\kilic\\Desktop\\ParkuV2\\Parku\\backend\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "C:\\Users\\Fabi\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\kilic\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
         "originalTargetFrameworks": [
@@ -69,7 +69,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Users\\Fabi\\scoop\\apps\\dotnet-sdk\\current\\sdk\\8.0.403/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.404/PortableRuntimeIdentifierGraph.json"
         }
       }
     }
