@@ -1,13 +1,13 @@
 import { StyleSheet, Text, View } from 'react-native'
 import React from 'react'
-import MapView, { PROVIDER_GOOGLE } from 'react-native-maps'
+import MapView, { PROVIDER_DEFAULT, PROVIDER_GOOGLE } from 'react-native-maps'
 
 type Props = {}
 
 const ExploreScreen = (props: Props) => {
   return (
     <View style={{ flex: 1 }}>
-			<MapView style={StyleSheet.absoluteFill} />
+			<MapView style={StyleSheet.absoluteFill} provider={PROVIDER_DEFAULT}/>
 		</View>
   )
 }
