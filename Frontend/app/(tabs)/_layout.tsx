@@ -23,11 +23,10 @@ export default function TabLayout() {
           <Ionicons name='notifications-outline' size={22} color={color} />
         )
       }} />
-      <Tabs.Screen name='cart' options={{
-        title: 'Cart',
-        tabBarBadge: 3,
+      <Tabs.Screen name='CreateSpot' options={{
+        title: 'Create',
         tabBarIcon: ({color}) => (
-          <Ionicons name='cart-outline' size={22} color={color} />
+          <Ionicons name='add-circle-outline' size={22} color={color} />
         )
       }} />
       <Tabs.Screen name='profile' options={{
