@@ -1,72 +1,91 @@
-import { StyleSheet, Text, View, Image, FlatList } from 'react-native'
-import React from 'react'
-import { Stack } from 'expo-router'
-import { useAuth } from '../../contexts/AuthContext';
+import { StyleSheet, Text, View, Image } from "react-native";
+import { Stack } from "expo-router";
+import { useAuth } from "../../contexts/AuthContext";
+import { FontAwesome } from "@expo/vector-icons";
+import ParkingSpaceList from "@/components/ParkingSpaceList";
+import {
+  useGetParkingSpacesWithNameByUserId,
+  useGetUserById,
+} from "@/hooks/database/queries";
+import React from "react";
 
-type Props = {}
-
-const ProfileScreen = (props: Props) => {
+const ProfileScreen = () => {
   const { session } = useAuth();
+  const { data: user } = useGetUserById(session?.user?.id ?? "");
+  const { data: parkingSpaces } = useGetParkingSpacesWithNameByUserId(
+    session?.user?.id ?? ""
+  );
 
-  const profile = {
-    name: "John Doe",
-    company: "Tech Co.",
-    rating: 4.5,
-    imageUrl: 'https://example.com/profile.jpg',
-    parkingSpots: [
-      { id: '1', location: 'Spot 1' },
-      { id: '2', location: 'Spot 2' },
-      // Add more spots as needed
-    ]
+  const renderStars = (rating: number) => {
+    const stars = [];
+    for (let i = 1; i <= 5; i++) {
+      stars.push(
+        <FontAwesome
+          key={i}
+          name={i <= rating ? "star" : "star-o"}
+          size={24}
+          color="#82DFF1"
+        />
+      );
+    }
+
+    return stars;
   };
 
   return (
     <>
       <Stack.Screen options={{ headerTitle: "Profile" }} />
-      <View style={styles.container}>
-        <Image source={{ uri: profile.imageUrl }} style={styles.profileImage} />
-        <Text style={styles.name}>{profile.name}</Text>
-        {profile.company && <Text style={styles.company}>{profile.company}</Text>}
-        <Text style={styles.rating}>Rating: {profile.rating} / 5</Text>
-        <FlatList
-          data={profile.parkingSpots}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => <Text style={styles.parkingSpot}>{item.location}</Text>}
+      <View>
+        <View style={styles.profileInfo}>
+          <Image
+            source={{ uri: user?.image_url }}
+            style={styles.profileImage}
+          />
+          <Text
+            style={styles.name}
+          >{`${user?.first_name} ${user?.last_name}`}</Text>
+          {!!user?.company_id && (
+            <Text style={styles.company}>{user.company_id}</Text>
+          )}
+          <View style={styles.starsContainer}>{renderStars(5)}</View>
+        </View>
+        <ParkingSpaceList
+          parkingSpaces={parkingSpaces}
+          noResultsText="You have no parking spaces listed"
         />
       </View>
     </>
-  )
-}
+  );
+};
 
-export default ProfileScreen
+export default ProfileScreen;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20
+  profileInfo: {
+    padding: 15,
+    alignItems: "center",
   },
   profileImage: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    marginBottom: 10
+    marginBottom: 10,
   },
   name: {
     fontSize: 20,
-    fontWeight: 'bold'
+    fontWeight: "bold",
   },
   company: {
     fontSize: 16,
-    color: 'gray'
+    color: "gray",
   },
   rating: {
     fontSize: 16,
-    marginVertical: 10
+    marginVertical: 10,
   },
-  parkingSpot: {
-    fontSize: 16,
-    marginVertical: 5
-  }
-})
+  starsContainer: {
+    flexDirection: "row",
+    gap: 5,
+    marginVertical: 5,
+  },
+});

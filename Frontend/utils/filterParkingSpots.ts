@@ -1,8 +1,10 @@
+import { ParkingSpaceWithName } from "@/types";
+
 export const filterParkingSpots = (
-  parkingData: any[],
+  parkingData: ParkingSpaceWithName[],
   filterCriteria: {
-    length?: string;
-    width?: string;
+    length?: number;
+    width?: number;
     distance?: number;
     minPrice?: number;
     maxPrice?: number;
@@ -15,17 +17,17 @@ export const filterParkingSpots = (
     let passesDistanceFilter = true;
     let passesPriceFilter = true;
 
-    // Filtere nach Länge, wenn festgelegt
+    // Length filter
     if (filterCriteria.length) {
-      passesLengthFilter = parking.length >= Number(filterCriteria.length);
+      passesLengthFilter = (parking.length ?? 0) >= filterCriteria.length;
     }
 
-    // Filtere nach Breite, wenn festgelegt
+    // Width filter
     if (filterCriteria.width) {
-      passesWidthFilter = parking.width >= Number(filterCriteria.width);
+      passesWidthFilter = (parking.width ?? 0) >= filterCriteria.width;
     }
 
-    // Filtere nach Entfernung, wenn Benutzerstandort vorhanden ist
+    // Distance filter
     if (filterCriteria.distance && filterCriteria.userLocation) {
       const distance = calculateDistance(
         parking.latitude,
@@ -36,12 +38,13 @@ export const filterParkingSpots = (
       passesDistanceFilter = distance <= filterCriteria.distance;
     }
 
-    // Filtere nach Preis, wenn festgelegt
+    // Price filter
     if (filterCriteria.minPrice !== undefined && filterCriteria.maxPrice !== undefined) {
-      passesPriceFilter = parking.pricePerHour >= filterCriteria.minPrice && parking.pricePerHour <= filterCriteria.maxPrice;
+      passesPriceFilter =
+        parking.price_per_hour >= filterCriteria.minPrice &&
+        parking.price_per_hour <= filterCriteria.maxPrice;
     }
 
-    // Nur wenn alle Filterbedingungen bestanden wurden, wird der Parkplatz zurückgegeben
     return passesLengthFilter && passesWidthFilter && passesDistanceFilter && passesPriceFilter;
   });
 };
@@ -55,7 +58,7 @@ const calculateDistance = (
 ) => {
   const R = 6371; // Radius der Erde in km
   const dLat = deg2rad(lat2 - lat1);
-  const dLon = deg2rad(lon2 - lon1);
+  const dLon = deg2rad(lon2 - lat1);
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos(deg2rad(lat1)) *

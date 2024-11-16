@@ -3,19 +3,21 @@ import {
   StyleSheet,
   Text,
   View,
-  FlatList,
   TouchableOpacity,
   ActivityIndicator,
-  ScrollView,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
 import FilterPopup from "../../components/FilterPopup"; // Correct import
 import { filterParkingSpots } from "../../utils/filterParkingSpots"; // Correct import
-import * as Location from "expo-location";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../contexts/AuthContext"; // Add this import (you'll need to create this context if you haven't already)
-import { supabase } from "../../lib/supabase"; // Adjust import path as needed
-import { ParkingSpace } from "../../types";
+import { ParkingSpaceWithName } from "../../types";
+import { router } from "expo-router";
+import ParkingSpaceList from "@/components/ParkingSpaceList";
+import {
+  useGetUserById,
+  useGetAllParkingSpacesWithName,
+} from "@/hooks/database/queries";
+import useUserLocation from "@/hooks/useUserLocation";
 
 type FilterCriteria = {
   userLocation?: {
@@ -25,139 +27,59 @@ type FilterCriteria = {
   distance?: number;
 };
 
-type Props = {};
-
-// HomeScreen Component
-const HomeScreen = (props: Props): JSX.Element => {
-  const navigation = useNavigation();
+const HomeScreen = (): JSX.Element => {
   const { session } = useAuth();
-  const [parkingData, setParkingData] = useState<ParkingSpace[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedParking, setSelectedParking] = useState<ParkingSpace | null>(
-    null
+  const { data: parkingSpaces, loading: parkingSpacesLoading } =
+    useGetAllParkingSpacesWithName();
+  const { data: user, loading: userLoading } = useGetUserById(
+    session?.user?.id ?? ""
   );
-  const [userName, setUserName] = useState<string>("Guest");
-  const [userLocation, setUserLocation] = useState<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
+  const { location: userLocation, loading: locationLoading } =
+    useUserLocation();
+  const isLoading = userLoading || parkingSpacesLoading || locationLoading;
+
   const [filterVisible, setFilterVisible] = useState<boolean>(false);
-  const [filteredParkingData, setFilteredParkingData] = useState<ParkingSpace[]>(
-    []
-  );
-
-  const dummyParkingData: ParkingSpace[] = [
-    {
-      id: "1",
-      address: "Haus 1",
-      user_id: "1",
-      company_id: "1",
-      availability_start: "2024-01-01",
-      availability_end: "2024-01-01",
-      is_available: true,
-      created_at: "2024-01-01",
-      latitude: 37.4219983,
-      longitude: -122.084,
-      description: "Ein schöner Parkplatz in der Nähe der Innenstadt",
-      length: 5,
-      width: 2,
-      price_per_hour: 10,
-    },
-
-  ];
-
-  // Fetch User Location
-  const fetchUserLocation = async (): Promise<void> => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        console.log("Permission denied. Using dummy data.");
-        setParkingData(dummyParkingData);
-        setFilteredParkingData(dummyParkingData);
-        setLoading(false);
-        return;
-      }
-
-      const currentLocation = await Location.getCurrentPositionAsync({});
-      setUserLocation(currentLocation.coords);
-
-      const nearbyParking = filterParkingSpots(dummyParkingData, {
-        userLocation: currentLocation.coords,
-        distance: 5, // Default distance in km
-      });
-      setFilteredParkingData(nearbyParking);
-    } catch (error) {
-      console.error("Error fetching location:", error);
-      setError("Failed to fetch user location");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchUserLocation();
-  }, []);
-
-  // Add this function to fetch user profile using Supabase's built-in profile management
-  const fetchUserProfile = async () => {
-    if (!session?.user?.id) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('first_name')
-        .eq('id', session.user.id)
-        .single();
-
-      if (error) throw error;
-
-      if (data?.first_name) {
-        setUserName(data.first_name);
-      }
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-    }
-  };
-
-  useEffect(() => {
-    if (session?.user?.id) {
-      fetchUserProfile();
-    }
-  }, [session]); // Re-fetch when session changes
+  const [filteredParkingSpaces, setFilteredParkingSpaces] = useState<
+    ParkingSpaceWithName[]
+  >([]);
 
   const applyFilter = (filterCriteria: FilterCriteria): void => {
-    if (userLocation) {
-      const filtered = filterParkingSpots(dummyParkingData, {
-        ...filterCriteria,
-        userLocation,
-      });
-      setFilteredParkingData(filtered);
-    } else {
-      const filtered = filterParkingSpots(dummyParkingData, filterCriteria);
-      setFilteredParkingData(filtered);
+    console.log("Applying filter with criteria:", filterCriteria);
+    console.log(parkingSpaces);
+    if (parkingSpaces) {
+      if (userLocation) {
+        const filtered = filterParkingSpots(parkingSpaces, {
+          ...filterCriteria,
+          userLocation: {
+            latitude: userLocation.coords.latitude,
+            longitude: userLocation.coords.longitude,
+          },
+        });
+        console.log("Filtered parking spaces with user location:", filtered);
+        setFilteredParkingSpaces(filtered);
+      } else if (parkingSpaces) {
+        const filtered = filterParkingSpots(parkingSpaces, filterCriteria);
+        console.log("Filtered parking spaces without user location:", filtered);
+        setFilteredParkingSpaces(filtered);
+      }
     }
     setFilterVisible(false);
   };
 
-  const renderParkingItem = ({ item }: { item: ParkingSpace }): JSX.Element => (
-    <TouchableOpacity onPress={() => setSelectedParking(item)}>
-      <View style={styles.parkingItem}>
-        <View style={styles.parkingIconContainer}>
-          <Text style={styles.parkingIcon}>{item.address.charAt(0)}</Text>
-        </View>
-        <View style={styles.parkingDetails}>
-          <Text style={styles.parkingName}>{item.address}</Text>
-          <Text style={styles.parkingOwner}>{item.user_id}</Text>
-        </View>
-        <View style={styles.parkingActions}>
-          <Ionicons name="information-circle-outline" size={24} color="black" />
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
+  useEffect(() => {
+    if (userLocation && parkingSpaces) {
+      const nearbyParking = filterParkingSpots(parkingSpaces, {
+        userLocation: {
+          latitude: userLocation.coords.latitude,
+          longitude: userLocation.coords.longitude,
+        },
+        distance: 5, // Default distance in km
+      });
+      setFilteredParkingSpaces(nearbyParking);
+    }
+  }, [userLocation, parkingSpaces]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#0000ff" />
@@ -166,72 +88,30 @@ const HomeScreen = (props: Props): JSX.Element => {
     );
   }
 
-  if (selectedParking) {
-    return (
-      <ScrollView contentContainerStyle={styles.detailContainer}>
-        <Text style={styles.detailTitle}>{selectedParking.address}</Text>
-        <View style={styles.detailSection}>
-          <Text style={styles.detailLabel}>Owner:</Text>
-          <Text style={styles.detailText}>{selectedParking.user_id}</Text>
-        </View>
-        <View style={styles.detailSection}>
-          <Text style={styles.detailLabel}>Description:</Text>
-          <Text style={styles.detailText}>{selectedParking.description}</Text>
-        </View>
-        <View style={styles.detailSection}>
-          <Text style={styles.detailLabel}>Length:</Text>
-          <Text style={styles.detailText}>{selectedParking.length} m</Text>
-        </View>
-        <View style={styles.detailSection}>
-          <Text style={styles.detailLabel}>Width:</Text>
-          <Text style={styles.detailText}>{selectedParking.width} m</Text>
-        </View>
-        <View style={styles.detailSection}>
-          <Text style={styles.detailLabel}>Price per hour:</Text>
-          <Text style={styles.detailText}>€{selectedParking.price_per_hour}</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => setSelectedParking(null)}
-        >
-          <Text style={styles.backButtonText}>Back to list</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    );
-  }
-
   return (
     <View style={styles.container}>
-      <Text style={styles.greeting}>Hello {userName}!</Text>
-      <TouchableOpacity
-        style={styles.exploreButton}
-        onPress={() => {
-          //@ts-ignore
-          navigation.navigate("explore")
-        }}
-      >
-        <Text style={styles.exploreButtonText}>Go explore parking lots!</Text>
-      </TouchableOpacity>
-      <View style={styles.horizontalLine} />
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>In your vicinity:</Text>
-        <TouchableOpacity onPress={() => setFilterVisible(true)}>
-          <Ionicons name="filter" size={24} color="black" />
+      <View style={{ padding: 15, paddingBottom: 0 }}>
+        <Text style={styles.greeting}>Hello {user?.first_name}!</Text>
+        <TouchableOpacity
+          style={styles.exploreButton}
+          onPress={() => {
+            router.push("/explore");
+          }}
+        >
+          <Text style={styles.exploreButtonText}>Go explore parking lots!</Text>
         </TouchableOpacity>
-      </View>
-      {filteredParkingData.length === 0 ? (
-        <View style={styles.noResultsContainer}>
-          <Text style={styles.noResultsText}>
-            No parking spots match your filter criteria.
-          </Text>
+        <View style={styles.horizontalLine} />
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>In your vicinity:</Text>
+          <TouchableOpacity onPress={() => setFilterVisible(true)}>
+            <Ionicons name="filter" size={24} color="black" />
+          </TouchableOpacity>
         </View>
-      ) : (
-        <FlatList
-          data={filteredParkingData}
-          renderItem={renderParkingItem}
-          keyExtractor={(item) => item.id.toString()}
-        />
-      )}
+      </View>
+      <ParkingSpaceList
+        parkingSpaces={filteredParkingSpaces}
+        noResultsText="No parking spaces match your filter criteria."
+      />
       <FilterPopup
         visible={filterVisible}
         onClose={() => setFilterVisible(false)}
@@ -246,8 +126,6 @@ export default HomeScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#ffffff",
-    padding: 24,
   },
   greeting: {
     fontSize: 35,
@@ -283,62 +161,10 @@ const styles = StyleSheet.create({
     fontSize: 25,
     fontWeight: "bold",
   },
-  parkingItem: {
-    backgroundColor: "#f9f9f9",
-    padding: 28,
-    borderRadius: 16,
-    marginBottom: 24,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    elevation: 2,
-  },
-  parkingIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#82DFF1",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 20,
-  },
-  parkingIcon: {
-    fontSize: 26,
-    color: "#ffffff",
-    fontWeight: "bold",
-  },
-  parkingDetails: {
-    flex: 1,
-  },
-  parkingName: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 6,
-  },
-  parkingOwner: {
-    fontSize: 16,
-    color: "#666",
-  },
-  parkingActions: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-  },
-  noResultsContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  noResultsText: {
-    fontSize: 20,
-    color: "#666",
-    fontWeight: "bold",
-    textAlign: "center",
   },
   detailContainer: {
     flex: 1,

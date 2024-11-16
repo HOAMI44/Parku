@@ -1,6 +1,7 @@
 // User type
 export type User = {
   id: string;
+  image_url?: string;
   first_name: string;
   last_name: string;
   email: string;
@@ -9,7 +10,7 @@ export type User = {
   role?: string;
   company_id?: string;
   created_at: string;
-}
+};
 
 // Company type
 export type Company = {
@@ -19,11 +20,12 @@ export type Company = {
   phone_number?: string;
   address?: string;
   created_at: string;
-}
+};
 
 // Parking Space type
 export type ParkingSpace = {
   id: string;
+  image_url?: string;
   user_id: string;
   company_id?: string;
   address: string;
@@ -37,7 +39,7 @@ export type ParkingSpace = {
   description?: string;
   length?: number;
   width?: number;
-}
+};
 
 // Booking type
 export type Booking = {
@@ -49,7 +51,7 @@ export type Booking = {
   total_price: number;
   status?: string;
   created_at: string;
-}
+};
 
 // Review type
 export type Review = {
@@ -59,7 +61,7 @@ export type Review = {
   rating: number;
   comment?: string;
   created_at: string;
-}
+};
 
 // Payment type
 export type Payment = {
@@ -70,4 +72,11 @@ export type Payment = {
   payment_method?: string;
   transaction_id?: string;
   created_at: string;
-} 
+};
+
+export type ParkingSpaceWithName = ParkingSpace & {
+  users: {
+    first_name: string;
+    last_name: string;
+  };
+};
