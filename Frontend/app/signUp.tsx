@@ -9,12 +9,43 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Link, Stack } from "expo-router";
+import { supabase } from '../lib/supabase'
+import { router } from 'expo-router'
 
 const SignUpScreen = () => {
-  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleSignUp = async () => {
+    if (password !== confirmPassword) {
+      setError("Passwords don't match")
+      return
+    }
+
+    try {
+      setLoading(true)
+      setError(null)
+      
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      })
+
+      if (error) throw error
+
+      // Success! You might want to show a success message
+      alert('Check your email for the confirmation link!')
+      router.replace('/signIn')
+      
+    } catch (error) {
+      setError(error as string)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <>
@@ -23,17 +54,6 @@ const SignUpScreen = () => {
         <View style={styles.header}>
           <Text style={styles.title}>Sign Up</Text>
           <Text style={styles.subtitle}>Create a new account</Text>
-        </View>
-
-        {/* Username Input */}
-        <View style={styles.inputContainer}>
-          <Ionicons name="person-outline" size={20} color="gray" style={styles.icon} />
-          <TextInput
-            style={styles.input}
-            placeholder="Username"
-            value={username}
-            onChangeText={setUsername}
-          />
         </View>
 
         {/* Email Input */}
@@ -72,13 +92,23 @@ const SignUpScreen = () => {
           />
         </View>
 
+        {error && (
+          <Text style={styles.errorText}>{error}</Text>
+        )}
+
         {/* Sign Up Button */}
-        <TouchableOpacity style={styles.signUpButton}>
+        <TouchableOpacity 
+          style={styles.signUpButton}
+          onPress={handleSignUp}
+          disabled={loading}
+        >
           <LinearGradient
             colors={["#ff9d00", "#ffb347"]}
             style={styles.gradient}
           >
-            <Text style={styles.signUpText}>Sign Up</Text>
+            <Text style={styles.signUpText}>
+              {loading ? 'Creating account...' : 'Sign Up'}
+            </Text>
             <Ionicons name="arrow-forward-outline" size={20} color="white" />
           </LinearGradient>
         </TouchableOpacity>
@@ -161,5 +191,10 @@ const styles = StyleSheet.create({
   loginLink: {
     color: "#ff9d00",
     fontWeight: "600",
+  },
+  errorText: {
+    color: 'red',
+    textAlign: 'center',
+    marginBottom: 10,
   },
 });
