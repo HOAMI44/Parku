@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, FlatList, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import FilterPopup from '../../components/FilterPopup'; // Korrekt importieren
+import { filterParkingSpots } from '../utils/filterParkingSpots'; // Importiere die Funktion korrekt
+import * as Location from 'expo-location';
+import { Ionicons } from '@expo/vector-icons';
 
 type Props = {}
 
@@ -10,57 +14,64 @@ const HomeScreen = (props: Props) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedParking, setSelectedParking] = useState(null);
-  const [userName, setUserName] = useState<string>(); 
+  const [userName, setUserName] = useState<string>('Amogus');
+  const [userLocation, setUserLocation] = useState(null);
+  const [filterVisible, setFilterVisible] = useState(false);
+  const [filteredParkingData, setFilteredParkingData] = useState([]);
 
   const dummyParkingData = [
-    { id: '1', name: 'Haus 1', owner: 'Peter Meter', description: 'Ein schöner Parkplatz in der Nähe der Innenstadt' },
-    { id: '2', name: 'Garage 1', owner: 'Gewerbe b', description: 'Garage in einem ruhigen Gewerbegebiet' },
-    { id: '3', name: 'Garten', owner: 'Rolf Schmolff', description: 'Ein Parkplatz direkt neben einem wunderschönen Garten' },
+    { id: '1', name: 'Haus 1', owner: 'Peter Meter', latitude: 37.4219983, longitude: -122.084, description: 'Ein schöner Parkplatz in der Nähe der Innenstadt', length: 5, width: 2, pricePerHour: 10 },
+    { id: '2', name: 'Garage 1', owner: 'Gewerbe b', latitude: 37.4219983, longitude: -122.084, description: 'Garage in einem ruhigen Gewerbegebiet', length: 6, width: 3, pricePerHour: 15 },
+    { id: '3', name: 'Garten', owner: 'Rolf Schmolff', latitude: 47.41400, longitude: 9.74100, description: 'Ein Parkplatz direkt neben einem wunderschönen Garten', length: 4, width: 2, pricePerHour: 8 },
   ];
 
-  // Funktion zum Abrufen der Parkplatzdaten
-  const fetchParkingData = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('https://example.com/api/parkingspots'); // Platzhalter-URL
-      if (!response.ok) {
-        throw new Error('Fehler beim Abrufen der Parkplatzdaten');
-      }
-      const data = await response.json();
-      setParkingData(data);
-    } catch (err: any) {
-      console.log('Backend nicht erreichbar, benutze Dummy-Daten.');
-      setParkingData(dummyParkingData);
-      setError(null);
-    } finally {
+  // Funktion zum Abrufen des Standorts des Benutzers
+  const fetchUserLocation = async () => {
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      console.log('Permission to access location was denied. Using dummy data.');
+      setParkingData(dummyParkingData); // Verwende Dummy-Daten, wenn Standort nicht abgerufen werden kann
+      setFilteredParkingData(dummyParkingData);
       setLoading(false);
+      return;
     }
-  };
 
-  // Funktion zum Abrufen der Nutzerdaten (einschließlich Benutzername)
-  const fetchUserData = async () => {
-    try {
-      const response = await fetch('https://example.com/api/user'); // Platzhalter-URL für Nutzerdaten
-      if (!response.ok) {
-        throw new Error('Fehler beim Abrufen der Nutzerdaten');
-      }
-      const userData = await response.json();
-      setUserName(userData.name);
-    } catch (err: any) {
-      console.log('Backend nicht erreichbar, benutze Dummy-Daten für den Nutzernamen.');
-      setUserName("Amogus"); 
-    }
+    let currentLocation = await Location.getCurrentPositionAsync({});
+    setUserLocation(currentLocation.coords);
+
+    // Finde Parkplätze in der Nähe
+    const nearbyParking = filterParkingSpots(dummyParkingData, {
+      userLocation: currentLocation.coords,
+      distance: 5, // Default distance in km
+    });
+    setFilteredParkingData(nearbyParking);
+    setLoading(false);
   };
 
   useEffect(() => {
-    fetchParkingData();
-    fetchUserData(); 
+    fetchUserLocation(); // Hole den Standort des Benutzers
   }, []);
 
+  const applyFilter = (filterCriteria) => {
+    console.log("Filter Criteria Received in applyFilter: ", filterCriteria); // Debug Log
+  
+    if (userLocation) {
+      const filtered = filterParkingSpots(dummyParkingData, {
+        ...filterCriteria,
+        userLocation: userLocation,
+      });
+      console.log("Filtered Parking Data: ", filtered); // Debug Log
+      setFilteredParkingData(filtered);
+    } else {
+      const filtered = filterParkingSpots(dummyParkingData, filterCriteria);
+      console.log("Filtered Parking Data without user location: ", filtered); // Debug Log
+      setFilteredParkingData(filtered);
+    }
+    setFilterVisible(false);
+  };
+
   const renderParkingItem = ({ item }) => (
-    <TouchableOpacity
-      onPress={() => setSelectedParking(item)}
-    >
+    <TouchableOpacity onPress={() => setSelectedParking(item)}>
       <View style={styles.parkingItem}>
         <View style={styles.parkingIconContainer}>
           <Text style={styles.parkingIcon}>{item.name.charAt(0)}</Text>
@@ -70,7 +81,7 @@ const HomeScreen = (props: Props) => {
           <Text style={styles.parkingOwner}>{item.owner}</Text>
         </View>
         <View style={styles.parkingActions}>
-          <Text>...</Text>
+          <Ionicons name="information-circle-outline" size={24} color="black" />
         </View>
       </View>
     </TouchableOpacity>
@@ -85,21 +96,31 @@ const HomeScreen = (props: Props) => {
     );
   }
 
-  if (error) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={styles.errorText}>Error: {error}</Text>
-      </View>
-    );
-  }
-
   if (selectedParking) {
     return (
-      <View style={styles.detailContainer}>
+      <ScrollView contentContainerStyle={styles.detailContainer}>
         <Text style={styles.detailTitle}>{selectedParking.name}</Text>
-        <Text style={styles.detailOwner}>Owner: {selectedParking.owner}</Text>
-        <Text style={styles.detailDescription}>{selectedParking.description}</Text>
-        
+        <View style={styles.detailSection}>
+          <Text style={styles.detailLabel}>Owner:</Text>
+          <Text style={styles.detailText}>{selectedParking.owner}</Text>
+        </View>
+        <View style={styles.detailSection}>
+          <Text style={styles.detailLabel}>Description:</Text>
+          <Text style={styles.detailText}>{selectedParking.description}</Text>
+        </View>
+        <View style={styles.detailSection}>
+          <Text style={styles.detailLabel}>Length:</Text>
+          <Text style={styles.detailText}>{selectedParking.length} m</Text>
+        </View>
+        <View style={styles.detailSection}>
+          <Text style={styles.detailLabel}>Width:</Text>
+          <Text style={styles.detailText}>{selectedParking.width} m</Text>
+        </View>
+        <View style={styles.detailSection}>
+          <Text style={styles.detailLabel}>Price per hour:</Text>
+          <Text style={styles.detailText}>€{selectedParking.pricePerHour}</Text>
+        </View>
+
         {/* Button zum Zurückkehren zur Liste */}
         <TouchableOpacity
           style={styles.backButton}
@@ -107,7 +128,7 @@ const HomeScreen = (props: Props) => {
         >
           <Text style={styles.backButtonText}>Back to list</Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     );
   }
 
@@ -122,14 +143,32 @@ const HomeScreen = (props: Props) => {
         <Text style={styles.exploreButtonText}>Go explore parking lots!</Text>
       </TouchableOpacity>
 
-      {/* Horizontale Linie */}
       <View style={styles.horizontalLine} />
 
-      <Text style={styles.sectionTitle}>In your vicinity:</Text>
-      <FlatList
-        data={parkingData}
-        renderItem={renderParkingItem}
-        keyExtractor={(item) => item.id.toString()}
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>In your vicinity:</Text>
+        <TouchableOpacity onPress={() => setFilterVisible(true)}>
+          <Ionicons name="filter" size={24} color="black" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Anzeigen der Liste oder "No Results" Nachricht */}
+      {filteredParkingData.length === 0 ? (
+        <View style={styles.noResultsContainer}>
+          <Text style={styles.noResultsText}>No parking spots match your filter criteria.</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={filteredParkingData}
+          renderItem={renderParkingItem}
+          keyExtractor={(item) => item.id.toString()}
+        />
+      )}
+
+      <FilterPopup
+        visible={filterVisible}
+        onClose={() => setFilterVisible(false)}
+        onApplyFilter={applyFilter}
       />
     </View>
   );
@@ -149,7 +188,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   exploreButton: {
-    backgroundColor: "#ff9d00",
+    backgroundColor: "#82DFF1",
     padding: 24,
     borderRadius: 12,
     alignItems: 'center',
@@ -160,17 +199,22 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 20,
     fontWeight: 'bold',
-    textAlign: 'center', // Text innerhalb des Buttons zentrieren
+    textAlign: 'center',
   },
   horizontalLine: {
     height: 1,
     backgroundColor: '#cccccc',
     marginVertical: 16,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
   sectionTitle: {
     fontSize: 25,
     fontWeight: 'bold',
-    marginBottom: 16,
   },
   parkingItem: {
     backgroundColor: '#f9f9f9',
@@ -186,7 +230,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: "#ff9d00",
+    backgroundColor: "#82DFF1",
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 20,
@@ -217,42 +261,49 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  errorContainer: {
+  noResultsContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
-  errorText: {
-    color: 'red',
-    fontSize: 16,
+  noResultsText: {
+    fontSize: 20,
+    color: '#666',
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
   detailContainer: {
     flex: 1,
     backgroundColor: '#ffffff',
     padding: 24,
-    justifyContent: 'center',
-    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
   },
   detailTitle: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 16,
+    color: '#333',
   },
-  detailOwner: {
-    fontSize: 20,
-    marginBottom: 8,
+  detailSection: {
+    marginBottom: 12,
   },
-  detailDescription: {
+  detailLabel: {
     fontSize: 18,
-    color: '#666',
-    marginBottom: 16,
+    fontWeight: 'bold',
+    color: '#444',
+  },
+  detailText: {
+    fontSize: 18,
+    color: '#555',
   },
   backButton: {
     marginTop: 20,
-    backgroundColor: "#ff9d00",
+    backgroundColor: "#82DFF1",
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 12,
+    alignSelf: 'center',
   },
   backButtonText: {
     color: '#ffffff',
