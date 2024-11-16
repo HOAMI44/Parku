@@ -1,76 +1,143 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, FlatList, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-import FilterPopup from '../../components/FilterPopup'; // Korrekt importieren
-import { filterParkingSpots } from '../utils/filterParkingSpots'; // Importiere die Funktion korrekt
-import * as Location from 'expo-location';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useState } from "react";
+import {
+  StyleSheet,
+  Text,
+  View,
+  FlatList,
+  TouchableOpacity,
+  ActivityIndicator,
+  ScrollView,
+} from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import FilterPopup from "../../components/FilterPopup"; // Correct import
+import { filterParkingSpots } from "../utils/filterParkingSpots"; // Correct import
+import * as Location from "expo-location";
+import { Ionicons } from "@expo/vector-icons";
 
-type Props = {}
+type ParkingSpot = {
+  id: string;
+  name: string;
+  owner: string;
+  latitude: number;
+  longitude: number;
+  description: string;
+  length: number;
+  width: number;
+  pricePerHour: number;
+};
 
-const HomeScreen = (props: Props) => {
+type FilterCriteria = {
+  userLocation?: {
+    latitude: number;
+    longitude: number;
+  };
+  distance?: number;
+};
+
+type Props = {};
+
+// HomeScreen Component
+const HomeScreen = (props: Props): JSX.Element => {
   const navigation = useNavigation();
-  const [parkingData, setParkingData] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [parkingData, setParkingData] = useState<ParkingSpot[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedParking, setSelectedParking] = useState(null);
-  const [userName, setUserName] = useState<string>('Amogus');
-  const [userLocation, setUserLocation] = useState(null);
-  const [filterVisible, setFilterVisible] = useState(false);
-  const [filteredParkingData, setFilteredParkingData] = useState([]);
+  const [selectedParking, setSelectedParking] = useState<ParkingSpot | null>(
+    null
+  );
+  const [userName, setUserName] = useState<string>("Amogus");
+  const [userLocation, setUserLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const [filterVisible, setFilterVisible] = useState<boolean>(false);
+  const [filteredParkingData, setFilteredParkingData] = useState<ParkingSpot[]>(
+    []
+  );
 
-  const dummyParkingData = [
-    { id: '1', name: 'Haus 1', owner: 'Peter Meter', latitude: 37.4219983, longitude: -122.084, description: 'Ein schöner Parkplatz in der Nähe der Innenstadt', length: 5, width: 2, pricePerHour: 10 },
-    { id: '2', name: 'Garage 1', owner: 'Gewerbe b', latitude: 37.4219983, longitude: -122.084, description: 'Garage in einem ruhigen Gewerbegebiet', length: 6, width: 3, pricePerHour: 15 },
-    { id: '3', name: 'Garten', owner: 'Rolf Schmolff', latitude: 47.41400, longitude: 9.74100, description: 'Ein Parkplatz direkt neben einem wunderschönen Garten', length: 4, width: 2, pricePerHour: 8 },
+  const dummyParkingData: ParkingSpot[] = [
+    {
+      id: "1",
+      name: "Haus 1",
+      owner: "Peter Meter",
+      latitude: 37.4219983,
+      longitude: -122.084,
+      description: "Ein schöner Parkplatz in der Nähe der Innenstadt",
+      length: 5,
+      width: 2,
+      pricePerHour: 10,
+    },
+    {
+      id: "2",
+      name: "Garage 1",
+      owner: "Gewerbe b",
+      latitude: 37.4219983,
+      longitude: -122.084,
+      description: "Garage in einem ruhigen Gewerbegebiet",
+      length: 6,
+      width: 3,
+      pricePerHour: 15,
+    },
+    {
+      id: "3",
+      name: "Garten",
+      owner: "Rolf Schmolff",
+      latitude: 47.414,
+      longitude: 9.741,
+      description: "Ein Parkplatz direkt neben einem wunderschönen Garten",
+      length: 4,
+      width: 2,
+      pricePerHour: 8,
+    },
   ];
 
-  // Funktion zum Abrufen des Standorts des Benutzers
-  const fetchUserLocation = async () => {
-    let { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      console.log('Permission to access location was denied. Using dummy data.');
-      setParkingData(dummyParkingData); // Verwende Dummy-Daten, wenn Standort nicht abgerufen werden kann
-      setFilteredParkingData(dummyParkingData);
+  // Fetch User Location
+  const fetchUserLocation = async (): Promise<void> => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        console.log("Permission denied. Using dummy data.");
+        setParkingData(dummyParkingData);
+        setFilteredParkingData(dummyParkingData);
+        setLoading(false);
+        return;
+      }
+
+      const currentLocation = await Location.getCurrentPositionAsync({});
+      setUserLocation(currentLocation.coords);
+
+      const nearbyParking = filterParkingSpots(dummyParkingData, {
+        userLocation: currentLocation.coords,
+        distance: 5, // Default distance in km
+      });
+      setFilteredParkingData(nearbyParking);
+    } catch (error) {
+      console.error("Error fetching location:", error);
+      setError("Failed to fetch user location");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    let currentLocation = await Location.getCurrentPositionAsync({});
-    setUserLocation(currentLocation.coords);
-
-    // Finde Parkplätze in der Nähe
-    const nearbyParking = filterParkingSpots(dummyParkingData, {
-      userLocation: currentLocation.coords,
-      distance: 5, // Default distance in km
-    });
-    setFilteredParkingData(nearbyParking);
-    setLoading(false);
   };
 
   useEffect(() => {
-    fetchUserLocation(); // Hole den Standort des Benutzers
+    fetchUserLocation();
   }, []);
 
-  const applyFilter = (filterCriteria) => {
-    console.log("Filter Criteria Received in applyFilter: ", filterCriteria); // Debug Log
-  
+  const applyFilter = (filterCriteria: FilterCriteria): void => {
     if (userLocation) {
       const filtered = filterParkingSpots(dummyParkingData, {
         ...filterCriteria,
-        userLocation: userLocation,
+        userLocation,
       });
-      console.log("Filtered Parking Data: ", filtered); // Debug Log
       setFilteredParkingData(filtered);
     } else {
       const filtered = filterParkingSpots(dummyParkingData, filterCriteria);
-      console.log("Filtered Parking Data without user location: ", filtered); // Debug Log
       setFilteredParkingData(filtered);
     }
     setFilterVisible(false);
   };
 
-  const renderParkingItem = ({ item }) => (
+  const renderParkingItem = ({ item }: { item: ParkingSpot }): JSX.Element => (
     <TouchableOpacity onPress={() => setSelectedParking(item)}>
       <View style={styles.parkingItem}>
         <View style={styles.parkingIconContainer}>
@@ -120,8 +187,6 @@ const HomeScreen = (props: Props) => {
           <Text style={styles.detailLabel}>Price per hour:</Text>
           <Text style={styles.detailText}>€{selectedParking.pricePerHour}</Text>
         </View>
-
-        {/* Button zum Zurückkehren zur Liste */}
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => setSelectedParking(null)}
@@ -135,27 +200,26 @@ const HomeScreen = (props: Props) => {
   return (
     <View style={styles.container}>
       <Text style={styles.greeting}>Hello {userName}!</Text>
-
       <TouchableOpacity
         style={styles.exploreButton}
-        onPress={() => navigation.navigate('explore')}
+        onPress={() => {
+          //@ts-ignore
+          navigation.navigate("explore")}}
       >
         <Text style={styles.exploreButtonText}>Go explore parking lots!</Text>
       </TouchableOpacity>
-
       <View style={styles.horizontalLine} />
-
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>In your vicinity:</Text>
         <TouchableOpacity onPress={() => setFilterVisible(true)}>
           <Ionicons name="filter" size={24} color="black" />
         </TouchableOpacity>
       </View>
-
-      {/* Anzeigen der Liste oder "No Results" Nachricht */}
       {filteredParkingData.length === 0 ? (
         <View style={styles.noResultsContainer}>
-          <Text style={styles.noResultsText}>No parking spots match your filter criteria.</Text>
+          <Text style={styles.noResultsText}>
+            No parking spots match your filter criteria.
+          </Text>
         </View>
       ) : (
         <FlatList
@@ -164,7 +228,6 @@ const HomeScreen = (props: Props) => {
           keyExtractor={(item) => item.id.toString()}
         />
       )}
-
       <FilterPopup
         visible={filterVisible}
         onClose={() => setFilterVisible(false)}
@@ -179,51 +242,51 @@ export default HomeScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     padding: 24,
   },
   greeting: {
     fontSize: 35,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 24,
   },
   exploreButton: {
     backgroundColor: "#82DFF1",
     padding: 24,
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 24,
   },
   exploreButtonText: {
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 20,
-    fontWeight: 'bold',
-    textAlign: 'center',
+    fontWeight: "bold",
+    textAlign: "center",
   },
   horizontalLine: {
     height: 1,
-    backgroundColor: '#cccccc',
+    backgroundColor: "#cccccc",
     marginVertical: 16,
   },
   sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 25,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   parkingItem: {
-    backgroundColor: '#f9f9f9',
+    backgroundColor: "#f9f9f9",
     padding: 28,
     borderRadius: 16,
     marginBottom: 24,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     elevation: 2,
   },
   parkingIconContainer: {
@@ -231,71 +294,71 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 30,
     backgroundColor: "#82DFF1",
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 20,
   },
   parkingIcon: {
     fontSize: 26,
-    color: '#ffffff',
-    fontWeight: 'bold',
+    color: "#ffffff",
+    fontWeight: "bold",
   },
   parkingDetails: {
     flex: 1,
   },
   parkingName: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 6,
   },
   parkingOwner: {
     fontSize: 16,
-    color: '#666',
+    color: "#666",
   },
   parkingActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   noResultsContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   noResultsText: {
     fontSize: 20,
-    color: '#666',
-    fontWeight: 'bold',
-    textAlign: 'center',
+    color: "#666",
+    fontWeight: "bold",
+    textAlign: "center",
   },
   detailContainer: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     padding: 24,
-    justifyContent: 'flex-start',
+    justifyContent: "flex-start",
   },
   detailTitle: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 16,
-    color: '#333',
+    color: "#333",
   },
   detailSection: {
     marginBottom: 12,
   },
   detailLabel: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#444',
+    fontWeight: "bold",
+    color: "#444",
   },
   detailText: {
     fontSize: 18,
-    color: '#555',
+    color: "#555",
   },
   backButton: {
     marginTop: 20,
@@ -303,12 +366,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 12,
-    alignSelf: 'center',
+    alignSelf: "center",
   },
   backButtonText: {
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 16,
-    fontWeight: 'bold',
-    textAlign: 'center',
+    fontWeight: "bold",
+    textAlign: "center",
   },
 });
