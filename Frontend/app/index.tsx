@@ -12,10 +12,22 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Colors } from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated'
+import { useEffect } from "react";
+import { useRouter } from "expo-router";
 
 type Props = {};
 
 const WelcomeScreen = (props: Props) => {
+  const router = useRouter();
+
+  useEffect(() => {
+    const isAuthenticated = false;
+    
+    if (isAuthenticated) {
+      router.replace("/(tabs)");
+    }
+  }, []);
+
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />

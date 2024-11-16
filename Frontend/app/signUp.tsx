@@ -36,12 +36,17 @@ const SignUpScreen = () => {
 
       if (error) throw error
 
-      // Success! You might want to show a success message
-      alert('Check your email for the confirmation link!')
-      router.replace('/signIn')
+      // Just redirect to verify page with email
+      router.replace({
+        pathname: '/verify',
+        params: { 
+          email,
+          password,
+        }
+      })
       
     } catch (error) {
-      setError(error as string)
+      setError((error as Error).message)
     } finally {
       setLoading(false)
     }

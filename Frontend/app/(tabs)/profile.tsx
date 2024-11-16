@@ -1,10 +1,13 @@
 import { StyleSheet, Text, View, Image, FlatList } from 'react-native'
 import React from 'react'
 import { Stack } from 'expo-router'
+import { useAuth } from '../../contexts/AuthContext';
 
 type Props = {}
 
 const ProfileScreen = (props: Props) => {
+  const { session } = useAuth();
+
   const profile = {
     name: "John Doe",
     company: "Tech Co.",

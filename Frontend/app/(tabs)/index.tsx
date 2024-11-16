@@ -10,21 +10,12 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import FilterPopup from "../../components/FilterPopup"; // Correct import
-import { filterParkingSpots } from "../utils/filterParkingSpots"; // Correct import
+import { filterParkingSpots } from "../../utils/filterParkingSpots"; // Correct import
 import * as Location from "expo-location";
 import { Ionicons } from "@expo/vector-icons";
-
-type ParkingSpot = {
-  id: string;
-  name: string;
-  owner: string;
-  latitude: number;
-  longitude: number;
-  description: string;
-  length: number;
-  width: number;
-  pricePerHour: number;
-};
+import { useAuth } from "../../contexts/AuthContext"; // Add this import (you'll need to create this context if you haven't already)
+import { supabase } from "../../lib/supabase"; // Adjust import path as needed
+import { ParkingSpace } from "../../types";
 
 type FilterCriteria = {
   userLocation?: {
@@ -39,56 +30,41 @@ type Props = {};
 // HomeScreen Component
 const HomeScreen = (props: Props): JSX.Element => {
   const navigation = useNavigation();
-  const [parkingData, setParkingData] = useState<ParkingSpot[]>([]);
+  const { session } = useAuth();
+  const [parkingData, setParkingData] = useState<ParkingSpace[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedParking, setSelectedParking] = useState<ParkingSpot | null>(
+  const [selectedParking, setSelectedParking] = useState<ParkingSpace | null>(
     null
   );
-  const [userName, setUserName] = useState<string>("Amogus");
+  const [userName, setUserName] = useState<string>("Guest");
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
     longitude: number;
   } | null>(null);
   const [filterVisible, setFilterVisible] = useState<boolean>(false);
-  const [filteredParkingData, setFilteredParkingData] = useState<ParkingSpot[]>(
+  const [filteredParkingData, setFilteredParkingData] = useState<ParkingSpace[]>(
     []
   );
 
-  const dummyParkingData: ParkingSpot[] = [
+  const dummyParkingData: ParkingSpace[] = [
     {
       id: "1",
-      name: "Haus 1",
-      owner: "Peter Meter",
-      latitude: 47.4062933,
-      longitude: 9.7446367,
+      address: "Haus 1",
+      user_id: "1",
+      company_id: "1",
+      availability_start: "2024-01-01",
+      availability_end: "2024-01-01",
+      is_available: true,
+      created_at: "2024-01-01",
+      latitude: 37.4219983,
+      longitude: -122.084,
       description: "Ein schöner Parkplatz in der Nähe der Innenstadt",
       length: 5,
       width: 2,
-      pricePerHour: 10,
+      price_per_hour: 10,
     },
-    {
-      id: "2",
-      name: "Garage 1",
-      owner: "Gewerbe b",
-      latitude: 47.4062933,
-      longitude: 9.7446367,
-      description: "Garage in einem ruhigen Gewerbegebiet",
-      length: 6,
-      width: 3,
-      pricePerHour: 15,
-    },
-    {
-      id: "3",
-      name: "Garten",
-      owner: "Rolf Schmolff",
-      latitude: 47.414,
-      longitude: 9.741,
-      description: "Ein Parkplatz direkt neben einem wunderschönen Garten",
-      length: 4,
-      width: 2,
-      pricePerHour: 8,
-    },
+
   ];
 
   // Fetch User Location
@@ -123,6 +99,33 @@ const HomeScreen = (props: Props): JSX.Element => {
     fetchUserLocation();
   }, []);
 
+  // Add this function to fetch user profile using Supabase's built-in profile management
+  const fetchUserProfile = async () => {
+    if (!session?.user?.id) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('first_name')
+        .eq('id', session.user.id)
+        .single();
+
+      if (error) throw error;
+
+      if (data?.first_name) {
+        setUserName(data.first_name);
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (session?.user?.id) {
+      fetchUserProfile();
+    }
+  }, [session]); // Re-fetch when session changes
+
   const applyFilter = (filterCriteria: FilterCriteria): void => {
     if (userLocation) {
       const filtered = filterParkingSpots(dummyParkingData, {
@@ -137,15 +140,15 @@ const HomeScreen = (props: Props): JSX.Element => {
     setFilterVisible(false);
   };
 
-  const renderParkingItem = ({ item }: { item: ParkingSpot }): JSX.Element => (
+  const renderParkingItem = ({ item }: { item: ParkingSpace }): JSX.Element => (
     <TouchableOpacity onPress={() => setSelectedParking(item)}>
       <View style={styles.parkingItem}>
         <View style={styles.parkingIconContainer}>
-          <Text style={styles.parkingIcon}>{item.name.charAt(0)}</Text>
+          <Text style={styles.parkingIcon}>{item.address.charAt(0)}</Text>
         </View>
         <View style={styles.parkingDetails}>
-          <Text style={styles.parkingName}>{item.name}</Text>
-          <Text style={styles.parkingOwner}>{item.owner}</Text>
+          <Text style={styles.parkingName}>{item.address}</Text>
+          <Text style={styles.parkingOwner}>{item.user_id}</Text>
         </View>
         <View style={styles.parkingActions}>
           <Ionicons name="information-circle-outline" size={24} color="black" />
@@ -166,10 +169,10 @@ const HomeScreen = (props: Props): JSX.Element => {
   if (selectedParking) {
     return (
       <ScrollView contentContainerStyle={styles.detailContainer}>
-        <Text style={styles.detailTitle}>{selectedParking.name}</Text>
+        <Text style={styles.detailTitle}>{selectedParking.address}</Text>
         <View style={styles.detailSection}>
           <Text style={styles.detailLabel}>Owner:</Text>
-          <Text style={styles.detailText}>{selectedParking.owner}</Text>
+          <Text style={styles.detailText}>{selectedParking.user_id}</Text>
         </View>
         <View style={styles.detailSection}>
           <Text style={styles.detailLabel}>Description:</Text>
@@ -185,7 +188,7 @@ const HomeScreen = (props: Props): JSX.Element => {
         </View>
         <View style={styles.detailSection}>
           <Text style={styles.detailLabel}>Price per hour:</Text>
-          <Text style={styles.detailText}>€{selectedParking.pricePerHour}</Text>
+          <Text style={styles.detailText}>€{selectedParking.price_per_hour}</Text>
         </View>
         <TouchableOpacity
           style={styles.backButton}
@@ -204,7 +207,8 @@ const HomeScreen = (props: Props): JSX.Element => {
         style={styles.exploreButton}
         onPress={() => {
           //@ts-ignore
-          navigation.navigate("explore")}}
+          navigation.navigate("explore")
+        }}
       >
         <Text style={styles.exploreButtonText}>Go explore parking lots!</Text>
       </TouchableOpacity>

@@ -9,6 +9,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router"; // Importiere den Router
+import { supabase } from '../lib/supabase'; // Make sure you have this configured
 
 const SignInDetail = () => {
   const router = useRouter(); // Router initialisieren
@@ -16,6 +17,41 @@ const SignInDetail = () => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
+
+  const createUser = async () => {
+    try {
+      // Get the current user's ID from Supabase Auth
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log(user);
+      if (!user) {
+        console.error('No authenticated user found');
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('users')
+        .insert([
+          {
+            id: user.id,
+            first_name: firstName,
+            last_name: lastName,
+            phone_number: phone,
+            role: 'individual'
+          }
+        ])
+        .select();
+
+      if (error) {
+        console.error('Error creating user:', error);
+        return;
+      }
+
+      router.dismissAll();
+      router.push("/(tabs)");
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -61,11 +97,7 @@ const SignInDetail = () => {
       {/* Continue Button */}
       <TouchableOpacity
         style={styles.continueButton}
-        onPress={() => {
-          // Router verwenden, um zur Hauptseite zu navigieren
-          router.dismissAll();
-          router.push("/(tabs)");
-        }}
+        onPress={createUser}
       >
         <LinearGradient
           colors={["#82DFF1", "#82DFF1"]}

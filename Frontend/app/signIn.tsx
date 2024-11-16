@@ -1,16 +1,61 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Link, router, Stack } from "expo-router";
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 const LoginScreen = () => {
+  const { session } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (session) {
+      router.replace('/(tabs)');
+    }
+  }, [session]);
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert("Error", "Please fill in all fields");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        Alert.alert("Error", error.message);
+        return;
+      }
+
+      if (data.user) {
+        router.dismissAll();
+        router.push("/(tabs)");
+      }
+    } catch (error) {
+      Alert.alert("Error", "Something went wrong. Please try again.");
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <>
       <Stack.Screen options={{ headerTitle: "Login" }} />
@@ -31,6 +76,9 @@ const LoginScreen = () => {
             style={styles.input}
             placeholder="Email"
             keyboardType="email-address"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
           />
         </View>
 
@@ -45,6 +93,8 @@ const LoginScreen = () => {
             style={styles.input}
             placeholder="Password"
             secureTextEntry
+            value={password}
+            onChangeText={setPassword}
           />
           <TouchableOpacity>
             <Text style={styles.forgotText}>Forgot</Text>
@@ -53,16 +103,16 @@ const LoginScreen = () => {
 
         <TouchableOpacity
           style={styles.loginButton}
-          onPress={() => {
-            router.dismissAll();
-            router.push("/(tabs)");
-          }}
+          onPress={handleLogin}
+          disabled={isLoading}
         >
           <LinearGradient
             colors={["#ff9d00", "#ffb347"]}
             style={styles.gradient}
           >
-            <Text style={styles.loginText}>Login</Text>
+            <Text style={styles.loginText}>
+              {isLoading ? "Logging in..." : "Login"}
+            </Text>
             <Ionicons name="arrow-forward-outline" size={20} color="white" />
           </LinearGradient>
         </TouchableOpacity>
