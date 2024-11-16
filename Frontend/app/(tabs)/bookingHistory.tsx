@@ -1,82 +1,272 @@
-import React, {useState} from 'react';
-import {Alert, Modal, StyleSheet, Text, Pressable, View} from 'react-native';
-import {SafeAreaView, SafeAreaProvider} from 'react-native-safe-area-context';
+import React, { useEffect, useState, useContext } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
+import { Booking, ParkingSpace } from '../../types/types';
+import { formatDate, formatTime, formatCurrency } from '../../utils/formatters';
 
-const App = () => {
-  const [modalVisible, setModalVisible] = useState(false);
+type BookingWithSpace = Booking & {
+  parking_space: ParkingSpace;
+};
+
+const BookingHistory = () => {
+  const router = useRouter();
+  const { session } = useAuth();
+  const [upcomingBookings, setUpcomingBookings] = useState<BookingWithSpace[]>([]);
+  const [pastBookings, setPastBookings] = useState<BookingWithSpace[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchBookings = async () => {
+    if (!session) return;
+
+    try {
+      const { data: bookings, error } = await supabase
+        .from('bookings')
+        .select(`
+          *,
+          parking_space:space_id (*)
+        `)
+        .eq('user_id', session.user.id)
+        .order('start_time', { ascending: true });
+
+      if (error) throw error;
+
+      const now = new Date();
+      const upcoming: BookingWithSpace[] = [];
+      const past: BookingWithSpace[] = [];
+
+      bookings?.forEach((booking: BookingWithSpace) => {
+        const endTime = new Date(booking.end_time);
+        if (endTime > now) {
+          upcoming.push(booking);
+        } else {
+          past.push(booking);
+        }
+      });
+
+      setUpcomingBookings(upcoming);
+      setPastBookings(past);
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBookings();
+  }, [session]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchBookings();
+  };
+
+  const renderBookingItem = ({ item }: { item: BookingWithSpace }) => (
+    <TouchableOpacity
+      style={styles.bookingCard}
+      onPress={() => {
+        router.push({
+          pathname: "/parking-details",
+          params: { parking: JSON.stringify(item.parking_space) }
+        });
+      }}
+    >
+      <View style={styles.bookingHeader}>
+        <Ionicons name="location" size={24} color="#82DFF1" />
+        <Text style={styles.address} numberOfLines={1}>
+          {item.parking_space.address}
+        </Text>
+      </View>
+
+      <View style={styles.bookingDetails}>
+        <View style={styles.detailRow}>
+          <Ionicons name="calendar-outline" size={16} color="#666" />
+          <Text style={styles.detailText}>
+            {formatDate(item.start_time)}
+          </Text>
+        </View>
+
+        <View style={styles.detailRow}>
+          <Ionicons name="time-outline" size={16} color="#666" />
+          <Text style={styles.detailText}>
+            {formatTime(item.start_time)} - {formatTime(item.end_time)}
+          </Text>
+        </View>
+
+        <View style={styles.detailRow}>
+          <Ionicons name="cash-outline" size={16} color="#666" />
+          <Text style={styles.detailText}>
+            {formatCurrency(item.total_price)}
+          </Text>
+        </View>
+
+        <View style={[styles.detailRow, styles.statusContainer]}>
+          <Text style={[
+            styles.status,
+            { color: item.status === 'confirmed' ? '#4CAF50' : '#FFA000' }
+          ]}>
+            {item.status?.toUpperCase() || 'CONFIRMED'}
+          </Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+
+  const renderSectionHeader = (title: string, count: number) => (
+    <View style={styles.sectionHeader}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      <Text style={styles.bookingCount}>{count} bookings</Text>
+    </View>
+  );
+
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color="#82DFF1" />
+      </View>
+    );
+  }
+
   return (
-    <SafeAreaProvider>
-      <SafeAreaView style={styles.centeredView}>
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={modalVisible}
-          onRequestClose={() => {
-            Alert.alert('Modal has been closed.');
-            setModalVisible(!modalVisible);
-          }}>
-          <View style={styles.centeredView}>
-            <View style={styles.modalView}>
-              <Text style={styles.modalText}>Hello World!</Text>
-              <Pressable
-                style={[styles.button, styles.buttonClose]}
-                onPress={() => setModalVisible(!modalVisible)}>
-                <Text style={styles.textStyle}>Hide Modal</Text>
-              </Pressable>
-            </View>
-          </View>
-        </Modal>
-        <Pressable
-          style={[styles.button, styles.buttonOpen]}
-          onPress={() => setModalVisible(true)}>
-          <Text style={styles.textStyle}>Show Modal</Text>
-        </Pressable>
-      </SafeAreaView>
-    </SafeAreaProvider>
+    <FlatList
+      style={styles.container}
+      data={[
+        { type: 'upcomingHeader' },
+        ...upcomingBookings,
+        { type: 'pastHeader' },
+        ...pastBookings
+      ]}
+      renderItem={({ item }) => {
+        if ('type' in item && item.type === 'upcomingHeader') {
+          return renderSectionHeader('Upcoming Bookings', upcomingBookings.length);
+        }
+        if ('type' in item && item.type === 'pastHeader') {
+          return renderSectionHeader('Past Bookings', pastBookings.length);
+        }
+        return renderBookingItem({ item: item as BookingWithSpace });
+      }}
+      keyExtractor={(item) => {
+        if ('type' in item) return item.type;
+        return item.id;
+      }}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={['#82DFF1']}
+        />
+      }
+      ListEmptyComponent={
+        <View style={styles.emptyContainer}>
+          <Ionicons name="calendar-outline" size={64} color="#ccc" />
+          <Text style={styles.emptyText}>No bookings found</Text>
+        </View>
+      }
+    />
   );
 };
 
 const styles = StyleSheet.create({
-  centeredView: {
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+    padding: 16,
+  },
+  centered: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalView: {
-    margin: 20,
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 35,
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: 12,
+    marginBottom: 8,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  bookingCount: {
+    fontSize: 14,
+    color: '#666',
+  },
+  bookingCard: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
   },
-  button: {
-    borderRadius: 20,
-    padding: 10,
-    elevation: 2,
+  bookingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
   },
-  buttonOpen: {
-    backgroundColor: '#F194FF',
+  address: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginLeft: 8,
+    flex: 1,
   },
-  buttonClose: {
-    backgroundColor: '#2196F3',
+  bookingDetails: {
+    gap: 8,
   },
-  textStyle: {
-    color: 'white',
-    fontWeight: 'bold',
-    textAlign: 'center',
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
-  modalText: {
-    marginBottom: 15,
-    textAlign: 'center',
+  detailText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  statusContainer: {
+    justifyContent: 'flex-end',
+    marginTop: 4,
+  },
+  status: {
+    fontSize: 12,
+    fontWeight: '600',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    backgroundColor: '#f5f5f5',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+    marginTop: 8,
   },
 });
 
-export default App;
+export default BookingHistory;
