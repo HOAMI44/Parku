@@ -181,8 +181,23 @@ const CreateSpace: React.FC = () => {
 
       console.log("Parking space created:", data);
       alert('Parking space created successfully!');
-      router.push('/profile');
       
+      // Clear all form fields
+      setName("");
+      setDescription("");
+      setLength("");
+      setWidth("");
+      setPrice("");
+      setImage("");
+      setAddress("");
+      setLatitude(0);
+      setLongitude(0);
+      setAvailabilityStart("");
+      setAvailabilityEnd("");
+      setStartTime(null);
+      setEndTime(null);
+
+      router.push('/profile');
       
     } catch (error) {
       console.error("Error creating spot:", error);

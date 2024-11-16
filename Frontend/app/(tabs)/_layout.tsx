@@ -40,11 +40,11 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="notifications"
+          name="bookingHistory"
           options={{
-            title: "Notifications",
+            title: "Bookings",
             tabBarIcon: ({ color }) => (
-              <Ionicons name="notifications-outline" size={22} color={color} />
+              <Ionicons name="calendar-outline" size={22} color={color} />
             ),
           }}
         />

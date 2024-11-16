@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../contexts/AuthContext"; // Add this import (you'll need to create this context if you haven't already)
 import { supabase } from "../../lib/supabase"; // Adjust import path as needed
 import { ParkingSpace } from "../../types/types";
+import { useRouter } from "expo-router";
 
 type FilterCriteria = {
   userLocation?: {
@@ -34,9 +35,6 @@ const HomeScreen = (props: Props): JSX.Element => {
   const [parkingData, setParkingData] = useState<ParkingSpace[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedParking, setSelectedParking] = useState<ParkingSpace | null>(
-    null
-  );
   const [userName, setUserName] = useState<string>("Guest");
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
@@ -140,18 +138,27 @@ const HomeScreen = (props: Props): JSX.Element => {
     setFilterVisible(false);
   };
 
+  const router = useRouter();
+
   const renderParkingItem = ({ item }: { item: ParkingSpace }): JSX.Element => (
-    <TouchableOpacity onPress={() => setSelectedParking(item)}>
+    <TouchableOpacity 
+      onPress={() => {
+        router.push({
+          pathname: "/parking-details",
+          params: { parking: JSON.stringify(item) }
+        });
+      }}
+    >
       <View style={styles.parkingItem}>
         <View style={styles.parkingIconContainer}>
           <Text style={styles.parkingIcon}>{item.address.charAt(0)}</Text>
         </View>
         <View style={styles.parkingDetails}>
           <Text style={styles.parkingName}>{item.address}</Text>
-          <Text style={styles.parkingOwner}>{item.user_id}</Text>
+          <Text style={styles.parkingPrice}>€{item.price_per_hour}/hour</Text>
         </View>
         <View style={styles.parkingActions}>
-          <Ionicons name="information-circle-outline" size={24} color="black" />
+          <Ionicons name="chevron-forward" size={24} color="#666" />
         </View>
       </View>
     </TouchableOpacity>
@@ -163,40 +170,6 @@ const HomeScreen = (props: Props): JSX.Element => {
         <ActivityIndicator size="large" color="#0000ff" />
         <Text>Loading parking spots...</Text>
       </View>
-    );
-  }
-
-  if (selectedParking) {
-    return (
-      <ScrollView contentContainerStyle={styles.detailContainer}>
-        <Text style={styles.detailTitle}>{selectedParking.address}</Text>
-        <View style={styles.detailSection}>
-          <Text style={styles.detailLabel}>Owner:</Text>
-          <Text style={styles.detailText}>{selectedParking.user_id}</Text>
-        </View>
-        <View style={styles.detailSection}>
-          <Text style={styles.detailLabel}>Description:</Text>
-          <Text style={styles.detailText}>{selectedParking.description}</Text>
-        </View>
-        <View style={styles.detailSection}>
-          <Text style={styles.detailLabel}>Length:</Text>
-          <Text style={styles.detailText}>{selectedParking.length} m</Text>
-        </View>
-        <View style={styles.detailSection}>
-          <Text style={styles.detailLabel}>Width:</Text>
-          <Text style={styles.detailText}>{selectedParking.width} m</Text>
-        </View>
-        <View style={styles.detailSection}>
-          <Text style={styles.detailLabel}>Price per hour:</Text>
-          <Text style={styles.detailText}>€{selectedParking.price_per_hour}</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => setSelectedParking(null)}
-        >
-          <Text style={styles.backButtonText}>Back to list</Text>
-        </TouchableOpacity>
-      </ScrollView>
     );
   }
 
@@ -315,7 +288,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 6,
   },
-  parkingOwner: {
+  parkingPrice: {
     fontSize: 16,
     color: "#666",
   },
@@ -337,44 +310,6 @@ const styles = StyleSheet.create({
   noResultsText: {
     fontSize: 20,
     color: "#666",
-    fontWeight: "bold",
-    textAlign: "center",
-  },
-  detailContainer: {
-    flex: 1,
-    backgroundColor: "#ffffff",
-    padding: 24,
-    justifyContent: "flex-start",
-  },
-  detailTitle: {
-    fontSize: 28,
-    fontWeight: "bold",
-    marginBottom: 16,
-    color: "#333",
-  },
-  detailSection: {
-    marginBottom: 12,
-  },
-  detailLabel: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#444",
-  },
-  detailText: {
-    fontSize: 18,
-    color: "#555",
-  },
-  backButton: {
-    marginTop: 20,
-    backgroundColor: "#82DFF1",
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    alignSelf: "center",
-  },
-  backButtonText: {
-    color: "#ffffff",
-    fontSize: 16,
     fontWeight: "bold",
     textAlign: "center",
   },
