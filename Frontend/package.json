@@ -20,6 +20,7 @@
     "@react-native-community/geolocation": "^3.4.0",
     "@react-native-community/slider": "^4.5.5",
     "@react-navigation/native": "^6.0.2",
+    "@supabase/supabase-js": "^2.46.1",
     "@tamagui/config": "^1.116.15",
     "@tamagui/lucide-icons": "^1.116.15",
     "axios": "^1.7.7",

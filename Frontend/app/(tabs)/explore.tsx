@@ -16,6 +16,7 @@ import { TamaPopover } from "@/components/TamaPopover";
 import { ChevronUp } from "@tamagui/lucide-icons";
 import { Button, XStack, YStack } from "tamagui";
 import Swiper from "react-native-deck-swiper"; // Import the swiper library
+import { supabase } from "@/lib/supabase";
 
 type Props = {};
 
@@ -67,15 +68,59 @@ const ExploreScreen = () => {
   const [markers, setMarkers] = useState(testMarkers);
   const [distance, setDistance] = useState(1);
   const [activePopover, setActivePopover] = useState<number | null>(null);
+const [parkingSpaces, setParkingSpaces] = useState<any[]>([]);
 
   // Data for parking spots (dummy data for demonstration)
   const [parkingSpots, setParkingSpots] = useState([
-    { id: 1, name: "Hotel 1", time: "5:00", type: "Hotel", width: 100, length: 100, rating: 5, price: 100 },
-    { id: 2, name: "Parking Lot 2", time: "6:00", type: "Parking", width: 120, length: 110, rating: 4, price: 80 },
-    { id: 3, name: "Garage 3", time: "7:00", type: "Garage", width: 150, length: 120, rating: 3, price: 90 },
+    {
+      id: 1,
+      name: "Hotel 1",
+      time: "5:00",
+      type: "Hotel",
+      width: 100,
+      length: 100,
+      rating: 5,
+      price: 100,
+    },
+    {
+      id: 2,
+      name: "Parking Lot 2",
+      time: "6:00",
+      type: "Parking",
+      width: 120,
+      length: 110,
+      rating: 4,
+      price: 80,
+    },
+    {
+      id: 3,
+      name: "Garage 3",
+      time: "7:00",
+      type: "Garage",
+      width: 150,
+      length: 120,
+      rating: 3,
+      price: 90,
+    },
   ]);
 
-  const snapPoints = useMemo(() => ["25%", "50%", "70%"], []);
+useEffect(() => {
+  const fetchParkingSpaces = async () => {
+    const {data,error} = await supabase
+    .from('parking_spaces')
+    .select('*');
+
+    if(error){
+      console.error("Error fetching parking spaces",error.message);
+    }else{
+      console.log("Parking spaces",data);
+      setParkingSpaces(data);
+      setMarkers(data);
+    }
+  };
+  fetchParkingSpaces();
+  
+}, []);
 
   useEffect(() => {
     const requestLocationPermission = async () => {
@@ -106,27 +151,30 @@ const ExploreScreen = () => {
     }
   };
 
+  const resetSearch = () => {
+    setSearchText("");
+    setMarkers(parkingSpaces);
+  };
+
   const handleSearch = () => {
+    handleDistance(distance); // Apply distance filter
     console.log("Search:", searchText);
 
-    if (!location) {
-      console.log("User location not available for distance filtering.");
-      return;
-    }
+   
 
     const userLatitude = location.coords.latitude;
     const userLongitude = location.coords.longitude;
 
-    const filteredMarkers = testMarkers.filter((marker) => {
+    const filteredMarkers = markers.filter((marker) => {
       const markerDistance = getDistanceFromLatLonInMeters(
         userLatitude,
         userLongitude,
         marker.latitude,
         marker.longitude
       );
-
+      console.log("ASDASD")
       return (
-        marker.name.toLowerCase().includes(searchText.toLowerCase()) &&
+        marker.address.toLowerCase().includes(searchText.toLowerCase()) &&
         markerDistance <= distance * 1000 // Convert `distance` to meters for comparison
       );
     });
@@ -134,33 +182,27 @@ const ExploreScreen = () => {
     setMarkers(filteredMarkers);
   };
 
-  const handleDistance = (value: number) => {
-    console.log("Distance:", value);
+  const handleDistance = async (value: number) => {
     setDistance(value);
-
-    if (location) {
-      const userLatitude = location.coords.latitude;
-      const userLongitude = location.coords.longitude;
-
-      const filteredMarkers = testMarkers.filter((marker) => {
-        const markerDistance = getDistanceFromLatLonInMeters(
-          userLatitude,
-          userLongitude,
-          marker.latitude,
-          marker.longitude
-        );
-
-        return markerDistance <= value * 1000; // Convert `value` to meters
-      });
-
-      setMarkers(filteredMarkers);
-
-      // Reset active popover if no marker matches
-      if (!filteredMarkers.some((marker) => marker.id === activePopover)) {
-        setActivePopover(null);
-      }
-    } else {
+    if (!location) {
       console.log("Location not available for distance filtering.");
+      return;
+    }
+    const userLatitude = location.coords.latitude;
+    const userLongitude = location.coords.longitude;
+    const filteredMarkers = markers.filter((marker) => {
+      const markerDistance = getDistanceFromLatLonInMeters(
+        userLatitude,
+        userLongitude,
+        marker.latitude,
+        marker.longitude
+      );
+      console.log(`Marker ${marker.name} is at ${markerDistance} meters`);
+      return markerDistance <= value * 1000;
+    });
+    setMarkers(filteredMarkers);
+    if (!filteredMarkers.some((marker) => marker.id === activePopover)) {
+      setActivePopover(null);
     }
   };
 
@@ -189,7 +231,9 @@ const ExploreScreen = () => {
   const onSwipeLeft = (cardIndex: number) => {
     console.log("Swiped left on card index:", cardIndex);
     // Remove the card from the array
-    const newParkingSpots = parkingSpots.filter((_, index) => index !== cardIndex);
+    const newParkingSpots = parkingSpots.filter(
+      (_, index) => index !== cardIndex
+    );
     setParkingSpots(newParkingSpots);
   };
 
@@ -218,36 +262,33 @@ const ExploreScreen = () => {
           onMapReady={focusMap}
         >
           {markers.map((imarker) => {
-  if (
-    !imarker.latitude ||
-    !imarker.longitude ||
-    typeof imarker.latitude !== "number" ||
-    typeof imarker.longitude !== "number"
-  ) {
-    console.warn("Invalid marker data:", imarker);
-    return null; // Skip invalid markers
-  }
+            if (
+              !imarker.latitude ||
+              !imarker.longitude ||
+              typeof imarker.latitude !== "number" ||
+              typeof imarker.longitude !== "number"
+            ) {
+              console.warn("Invalid marker data:", imarker);
+              return null; // Skip invalid markers
+            }
 
-  return (
-    <Marker
-      key={imarker.id}
-      coordinate={{
-        latitude: imarker.latitude,
-        longitude: imarker.longitude,
-      }}
-      title={imarker.name || "Unknown Location"}
-      onPress={() => setActivePopover(imarker.id)}
-    >
-      {activePopover === imarker.id && (
-        <Callout>
-          <View>
-            <Text>{imarker.name}</Text>
-          </View>
-        </Callout>
-      )}
-    </Marker>
-  );
-})}
+            return (
+              <Marker
+                key={imarker.id}
+                coordinate={{
+                  latitude: imarker.latitude,
+                  longitude: imarker.longitude,
+                }}
+                onPress={() => setActivePopover(imarker.id)}
+              >
+                <Callout style={{height:150,width:180}} onPress={()=>{}}>
+                  <View style={{flex: 1,justifyContent:"space-between"}}>
+                    <Text>{imarker.address}</Text>
+                  </View>
+                </Callout>
+              </Marker>
+            );
+          })}
         </MapView>
 
         {/* Search Bar and Focus Button */}
@@ -278,7 +319,13 @@ const ExploreScreen = () => {
             </XStack>
           </YStack>
           <Button color="aliceblue" variant="outlined" onPress={focusMap}>
-            <Text>Focus</Text>
+            <Text>F</Text>
+          </Button>
+          <Button color="aliceblue" variant="outlined" onPress={handleSearch}>
+            <Text>S</Text>
+          </Button>
+          <Button color="aliceblue" variant="outlined" onPress={resetSearch}>
+            <Text>R</Text>
           </Button>
         </View>
       </View>
