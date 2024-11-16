@@ -37,6 +37,7 @@ export type ParkingSpace = {
   description?: string;
   length?: number;
   width?: number;
+  image_url?: string;
 }
 
 // Booking type

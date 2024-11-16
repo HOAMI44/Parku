@@ -49,7 +49,7 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="CreateSpot"
+          name="CreateSpace"
           options={{
             title: "Create",
             tabBarIcon: ({ color }) => (

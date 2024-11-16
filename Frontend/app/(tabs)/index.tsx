@@ -15,7 +15,7 @@ import * as Location from "expo-location";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../contexts/AuthContext"; // Add this import (you'll need to create this context if you haven't already)
 import { supabase } from "../../lib/supabase"; // Adjust import path as needed
-import { ParkingSpace } from "../../types";
+import { ParkingSpace } from "../../types/types";
 
 type FilterCriteria = {
   userLocation?: {
