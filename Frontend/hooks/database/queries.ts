@@ -1,4 +1,4 @@
-import { User, ParkingSpaceWithName } from "@/types";
+import { User, ParkingSpaceWithName } from "@/types/types";
 import { supabase } from "../../lib/supabase";
 import useSupabase from "./useSupaBase";
 import { useCallback } from "react";

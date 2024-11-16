@@ -1,6 +1,6 @@
 import { StyleSheet, Text, TouchableOpacity, View, Image } from "react-native";
 import React from "react";
-import { ParkingSpaceWithName } from "@/types";
+import { ParkingSpaceWithName } from "@/types/types";
 
 type ParkingSpaceCardProps = {
   parkingSpace: ParkingSpaceWithName;

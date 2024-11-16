@@ -1,4 +1,4 @@
-import { ParkingSpaceWithName } from "@/types";
+import { ParkingSpaceWithName } from "@/types/types";
 
 export const filterParkingSpots = (
   parkingData: ParkingSpaceWithName[],

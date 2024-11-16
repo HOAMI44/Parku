@@ -10,7 +10,7 @@ import FilterPopup from "../../components/FilterPopup"; // Correct import
 import { filterParkingSpots } from "../../utils/filterParkingSpots"; // Correct import
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../../contexts/AuthContext"; // Add this import (you'll need to create this context if you haven't already)
-import { ParkingSpaceWithName } from "../../types";
+import { ParkingSpaceWithName } from "../../types/types";
 import { router } from "expo-router";
 import ParkingSpaceList from "@/components/ParkingSpaceList";
 import {
@@ -65,8 +65,6 @@ const HomeScreen = (): JSX.Element => {
     }
     setFilterVisible(false);
   };
-
-  const router = useRouter();
 
   useEffect(() => {
     if (userLocation && parkingSpaces) {
