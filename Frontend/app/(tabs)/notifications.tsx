@@ -1,42 +1,74 @@
-import React, { useMemo } from "react";
-import { StyleSheet, Text, View } from "react-native";
-import BottomSheet from "@gorhom/bottom-sheet";
+import React, { useCallback, useMemo, useRef } from 'react';
+import { StyleSheet, View, Text, Button } from 'react-native';
+import BottomSheet, { BottomSheetBackdrop } from '@gorhom/bottom-sheet';
 
-const NotificationsScreen = () => {
-  const snapPoints = useMemo(() => ["25%", "50%", "70%"], []);
+export default function TabOneScreen() {
+  const snapPoints = useMemo(() => ['25%', '50%', '70%'], []);
+  const bottomSheetRef = useRef<BottomSheet>(null);
+
+  const handleClosePress = () => bottomSheetRef.current?.close();
+  const handleOpenPress = () => bottomSheetRef.current?.expand();
+  const handleCollapsePress = () => bottomSheetRef.current?.collapse();
+  const snapToIndex = (index: number) => bottomSheetRef.current?.snapToIndex(index);
+
+  const renderBackdrop = useCallback(
+    //@ts-ignore
+    (props) => <BottomSheetBackdrop appearsOnIndex={0} disappearsOnIndex={-1} {...props} />,
+    []
+  );
 
   return (
     <View style={styles.container}>
-      <Text>Notifications Screen</Text>
-      {/* Bottom Sheet */}
+      <View style={styles.buttonContainer}>
+        <Button title="Open" onPress={handleOpenPress} />
+        <Button title="Close" onPress={handleClosePress} />
+        <Button title="Collapse" onPress={handleCollapsePress} />
+        <Button title="Snap To 0" onPress={() => snapToIndex(0)} />
+        <Button title="Snap To 1" onPress={() => snapToIndex(1)} />
+        <Button title="Snap To 2" onPress={() => snapToIndex(2)} />
+      </View>
+
       <BottomSheet
+        ref={bottomSheetRef}
+        index={0}
         snapPoints={snapPoints}
         enablePanDownToClose={true}
-        backgroundStyle={styles.bottomSheetBackground}
+        backdropComponent={renderBackdrop}
+        handleIndicatorStyle={{ backgroundColor: '#fff' }}
+        backgroundStyle={{ backgroundColor: '#1d0f4e' }}
       >
-        <View style={styles.sheetContent}>
-          <Text>Hello from Bottom Sheet!</Text>
+        <View style={styles.contentContainer}>
+          <Text style={styles.containerHeadline}>Awesome Bottom Sheet 🎉</Text>
+          <Button title="Close" onPress={handleClosePress} />
         </View>
       </BottomSheet>
     </View>
   );
-};
-
-export default NotificationsScreen;
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
+    justifyContent: 'center',
+    backgroundColor: '#f0f0f0',
   },
-  bottomSheetBackground: {
-    backgroundColor: "white",
-    borderRadius: 10,
+  buttonContainer: {
+    position: 'absolute',
+    top: 20,
+    alignSelf: 'center',
+    zIndex: 10, // Ensure buttons stay on top of the bottom sheet
   },
-  sheetContent: {
+  contentContainer: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+    backgroundColor: '#1d0f4e', // Match background for better visibility
+  },
+  containerHeadline: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#fff',
+    marginBottom: 20,
   },
 });
