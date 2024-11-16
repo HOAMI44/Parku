@@ -2,10 +2,16 @@ import React from "react";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { createTamagui,TamaguiProvider, View } from 'tamagui'
+import defaultConfig from '@tamagui/config/v3'
+
+const config = createTamagui(defaultConfig)
+
 
 export default function TabLayout() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <TamaguiProvider config={config}>
+        <GestureHandlerRootView style={{ flex: 1 }}>
       <Tabs
         screenOptions={{
           headerShown: false,
@@ -59,5 +65,6 @@ export default function TabLayout() {
         />
       </Tabs>
     </GestureHandlerRootView>
+    </TamaguiProvider>
   );
 }
