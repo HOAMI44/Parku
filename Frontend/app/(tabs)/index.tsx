@@ -66,6 +66,8 @@ const HomeScreen = (): JSX.Element => {
     setFilterVisible(false);
   };
 
+  const router = useRouter();
+
   useEffect(() => {
     if (userLocation && parkingSpaces) {
       const nearbyParking = filterParkingSpots(parkingSpaces, {

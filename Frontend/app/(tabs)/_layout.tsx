@@ -2,13 +2,19 @@ import React from "react";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { createTamagui,TamaguiProvider, View } from 'tamagui'
+import defaultConfig from '@tamagui/config/v3'
+
+const config = createTamagui(defaultConfig)
+
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function TabLayout() {
   const { session } = useAuth();
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <TamaguiProvider config={config}>
+        <GestureHandlerRootView style={{ flex: 1 }}>
       <Tabs
         screenOptions={{
           headerShown: false,
@@ -34,16 +40,16 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="notifications"
+          name="bookingHistory"
           options={{
-            title: "Notifications",
+            title: "Bookings",
             tabBarIcon: ({ color }) => (
-              <Ionicons name="notifications-outline" size={22} color={color} />
+              <Ionicons name="calendar-outline" size={22} color={color} />
             ),
           }}
         />
         <Tabs.Screen
-          name="CreateSpot"
+          name="CreateSpace"
           options={{
             title: "Create",
             tabBarIcon: ({ color }) => (
@@ -62,5 +68,6 @@ export default function TabLayout() {
         />
       </Tabs>
     </GestureHandlerRootView>
+    </TamaguiProvider>
   );
 }
