@@ -8,11 +8,9 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { Stack } from "expo-router";
-import { useNavigation } from "@react-navigation/native"; // Importiere useNavigation
+import { Link, Stack } from "expo-router";
 
 const SignUpScreen = () => {
-  const navigation = useNavigation(); // Initialisiere Navigation
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -75,13 +73,7 @@ const SignUpScreen = () => {
         </View>
 
         {/* Sign Up Button */}
-        <TouchableOpacity
-          style={styles.signUpButton}
-          onPress={() => {
-            //@ts-ignore
-            navigation.navigate("SignInDetail");
-          }}
-        >
+        <TouchableOpacity style={styles.signUpButton}>
           <LinearGradient
             colors={["#ff9d00", "#ffb347"]}
             style={styles.gradient}
@@ -93,10 +85,9 @@ const SignUpScreen = () => {
 
         <Text style={styles.loginText}>
           Already have an account?{" "}
-          <TouchableOpacity onPress={ //@ts-ignore 
-          () => navigation.navigate("signIn")}>
+          <Link href={"/signIn"}>
             <Text style={styles.loginLink}>Log In</Text>
-          </TouchableOpacity>
+          </Link>
         </Text>
       </View>
     </>

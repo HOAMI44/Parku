@@ -68,7 +68,7 @@ const SignInDetail = () => {
         }}
       >
         <LinearGradient
-          colors={["#82DFF1"]}
+          colors={["#82DFF1", "#82DFF1"]}
           style={styles.gradient}
         >
           <Text style={styles.continueText}>Continue</Text>
