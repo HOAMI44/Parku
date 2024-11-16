@@ -6,7 +6,12 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 export default function TabLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <Tabs screenOptions={{ headerShown: false }}>
+      <Tabs
+        screenOptions={{
+          headerShown: false,
+          headerTitle: undefined, 
+        }}
+      >
         <Tabs.Screen
           name="index"
           options={{
@@ -17,18 +22,18 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="explore"
-          options={{
-            title: "Explore",
-            tabBarIcon: ({ color }) => (
-              <Ionicons name="search-outline" size={22} color={color} />
-            ),
-          }}
-        />
+        name="explore"
+        options={{
+          headerTitle: "Map", // Set the title to "Map"
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="search-outline" size={22} color={color} />
+          ),
+        }}
+      />
         <Tabs.Screen
           name="notifications"
           options={{
-            title: "Notification",
+            title: "Notifications",
             tabBarIcon: ({ color }) => (
               <Ionicons name="notifications-outline" size={22} color={color} />
             ),

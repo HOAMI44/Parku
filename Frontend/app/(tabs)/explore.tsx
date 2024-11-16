@@ -9,9 +9,10 @@ import {
 import React, { useState, useEffect, useMemo } from "react";
 import MapView, { PROVIDER_DEFAULT } from "react-native-maps";
 import * as Location from "expo-location";
-import { TouchableOpacity } from "react-native-gesture-handler";
+import { ScrollView, TouchableOpacity } from "react-native-gesture-handler";
 import { Stack } from "expo-router";
 import BottomSheet from "@gorhom/bottom-sheet";
+import CardMap from "@/components/CardMap";
 
 type Props = {};
 
@@ -21,8 +22,6 @@ const INITIAL_REGION = {
   latitudeDelta: 0.01,
   longitudeDelta: 0.01,
 };
-
-
 
 const ExploreScreen = (props: Props) => {
   const [location, setLocation] = useState<any>(null);
@@ -70,14 +69,6 @@ const ExploreScreen = (props: Props) => {
       <Stack.Screen
         options={{
           headerTitle: "Map",
-          headerRight: () => (
-            <TouchableOpacity
-              onPress={focusMap}
-              style={{ paddingHorizontal: 15 }}
-            >
-              <Text style={{ color: "blue", fontSize: 16 }}>Focus</Text>
-            </TouchableOpacity>
-          ),
         }}
       />
 
@@ -104,15 +95,29 @@ const ExploreScreen = (props: Props) => {
           <Pressable onPress={focusMap} style={styles.focusButton}>
             <Text style={styles.buttonText}>Focus</Text>
           </Pressable>
-          <View style={styles.bottomSheet}>
-            <Text>Haadasdasdasdasdllo</Text>
-            <BottomSheet index={1} snapPoints={snapPoints}>
-              <View>
-                <Text>Hallo</Text>
-              </View>
-            </BottomSheet>
-          </View>
         </View>
+      </View>
+      <View style={styles.bottomSheet}>
+        <ScrollView
+          style={{
+            width: "100%",
+            height: 280,
+            backgroundColor: "white",
+            borderRadius: 35,
+          }}
+          horizontal={true}
+        >
+         <CardMap
+       id={1}
+       name="Hotel"
+       time="5:00"
+       type="Hotel"
+       width={100}
+       length={100}
+       rating={5}
+       price={100}
+       />
+        </ScrollView>
       </View>
     </>
   );
@@ -157,11 +162,11 @@ const styles = StyleSheet.create({
   },
   bottomSheet: {
     position: "absolute",
-    top: 100, // Position near the top of the screen
-    left: 10,
-    right: 10,
-    flexDirection: "row",
+    bottom: 0, // Position near the top of the screen
+    left: 0,
+    right: 0,
+    width: "100%",
     alignItems: "center",
     zIndex: 10,
-  }
+  },
 });

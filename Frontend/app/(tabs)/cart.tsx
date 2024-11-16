@@ -1,12 +1,22 @@
 import { StyleSheet, Text, View } from 'react-native'
 import React from 'react'
+import CardMap from '@/components/CardMap'
 
 type Props = {}
 
 const CartScreen = (props: Props) => {
   return (
     <View style={styles.container}>
-      <Text>Cart Screen</Text>
+      <CardMap
+       id={1}
+       name="Hotel"
+       time="5:00"
+       type="Hotel"
+       width={100}
+       length={100}
+       rating={5}
+       price={100}
+       />
     </View>
   )
 }

@@ -13,7 +13,7 @@ import { Link, router, Stack } from "expo-router";
 const LoginScreen = () => {
   return (
     <>
-      <Stack.Screen options={{ headerTitle:'Login'}} />
+      <Stack.Screen options={{ headerTitle: "Login" }} />
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>Login</Text>
@@ -21,7 +21,12 @@ const LoginScreen = () => {
         </View>
 
         <View style={styles.inputContainer}>
-          <Ionicons name="mail-outline" size={20} color="gray" style={styles.icon} />
+          <Ionicons
+            name="mail-outline"
+            size={20}
+            color="gray"
+            style={styles.icon}
+          />
           <TextInput
             style={styles.input}
             placeholder="Email"
@@ -30,7 +35,12 @@ const LoginScreen = () => {
         </View>
 
         <View style={styles.inputContainer}>
-          <Ionicons name="lock-closed-outline" size={20} color="gray" style={styles.icon} />
+          <Ionicons
+            name="lock-closed-outline"
+            size={20}
+            color="gray"
+            style={styles.icon}
+          />
           <TextInput
             style={styles.input}
             placeholder="Password"
@@ -41,7 +51,13 @@ const LoginScreen = () => {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.loginButton} onPress={() => {router.dismissAll(); router.push('/(tabs)');}}>
+        <TouchableOpacity
+          style={styles.loginButton}
+          onPress={() => {
+            router.dismissAll();
+            router.push("/(tabs)");
+          }}
+        >
           <LinearGradient
             colors={["#ff9d00", "#ffb347"]}
             style={styles.gradient}
