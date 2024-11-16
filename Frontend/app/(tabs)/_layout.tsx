@@ -40,12 +40,11 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="cart"
+          name="CreateSpot"
           options={{
-            title: "Cart",
-            tabBarBadge: 3,
+            title: "Create",
             tabBarIcon: ({ color }) => (
-              <Ionicons name="cart-outline" size={22} color={color} />
+              <Ionicons name="add-circle-outline" size={22} color={color} />
             ),
           }}
         />
