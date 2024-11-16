@@ -2,7 +2,7 @@
 *.p12
 *.key
 *.mobileprovision
-*.orig.*
+.orig.
 web-build/
 
 # Created by https://www.toptal.com/developers/gitignore/api/node,macos,windows,reactnative,react,visualstudiocode
@@ -53,7 +53,7 @@ lerna-debug.log*
 .pnpm-debug.log*
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
-report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+report.[0-9].[0-9].[0-9].[0-9].json
 
 # Runtime data
 pids
@@ -184,12 +184,12 @@ dist
 
 ### react ###
 .DS_*
-**/*.backup.*
-**/*.back.*
+*/.backup.*
+*/.back.*
 
 node_modules
 
-*.sublime*
+.sublime
 
 psd
 thumb
@@ -200,7 +200,7 @@ sketch
 
 .expo
 expo-env.d.ts
-__generated__
+_generated_
 
 ### ReactNative.Node Stack ###
 # Logs
@@ -416,3 +416,5 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+
+# End of https://www.toptal.com/developers/gitignore/api/node,macos,windows,reactnative,react,visualstudiocode

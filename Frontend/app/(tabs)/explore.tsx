@@ -1,3 +1,4 @@
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Platform,
   Pressable,
@@ -6,7 +7,6 @@ import {
   View,
   TextInput,
 } from "react-native";
-import React, { useState, useEffect, useMemo } from "react";
 import MapView, { Callout, Marker, PROVIDER_DEFAULT } from "react-native-maps";
 import * as Location from "expo-location";
 import { ScrollView } from "react-native-gesture-handler";
@@ -15,6 +15,9 @@ import CardMap from "@/components/CardMap";
 import { TamaPopover } from "@/components/TamaPopover";
 import { ChevronUp } from "@tamagui/lucide-icons";
 import { Button, XStack, YStack } from "tamagui";
+import Swiper from "react-native-deck-swiper"; // Import the swiper library
+
+type Props = {};
 
 const INITIAL_REGION = {
   latitude: 47.41375,
@@ -64,6 +67,15 @@ const ExploreScreen = () => {
   const [markers, setMarkers] = useState(testMarkers);
   const [distance, setDistance] = useState(1);
   const [activePopover, setActivePopover] = useState<number | null>(null);
+
+  // Data for parking spots (dummy data for demonstration)
+  const [parkingSpots, setParkingSpots] = useState([
+    { id: 1, name: "Hotel 1", time: "5:00", type: "Hotel", width: 100, length: 100, rating: 5, price: 100 },
+    { id: 2, name: "Parking Lot 2", time: "6:00", type: "Parking", width: 120, length: 110, rating: 4, price: 80 },
+    { id: 3, name: "Garage 3", time: "7:00", type: "Garage", width: 150, length: 120, rating: 3, price: 90 },
+  ]);
+
+  const snapPoints = useMemo(() => ["25%", "50%", "70%"], []);
 
   useEffect(() => {
     const requestLocationPermission = async () => {
@@ -173,6 +185,19 @@ const ExploreScreen = () => {
     return d;
   };
 
+  // Handle swipe actions
+  const onSwipeLeft = (cardIndex: number) => {
+    console.log("Swiped left on card index:", cardIndex);
+    // Remove the card from the array
+    const newParkingSpots = parkingSpots.filter((_, index) => index !== cardIndex);
+    setParkingSpots(newParkingSpots);
+  };
+
+  const onSwipeRight = (cardIndex: number) => {
+    console.log("Swiped right on card index:", cardIndex);
+    // You can implement logic for a "yes" swipe here (e.g., adding to favorites)
+  };
+
   return (
     <>
       <Stack.Screen
@@ -257,6 +282,34 @@ const ExploreScreen = () => {
           </Button>
         </View>
       </View>
+
+      {/* Swiper Component for Parking Spots */}
+      <View style={styles.swiperContainer}>
+        <Swiper
+          cards={parkingSpots}
+          renderCard={(card) => {
+            return (
+              <View style={styles.card}>
+                <CardMap
+                  id={card.id}
+                  name={card.name}
+                  time={card.time}
+                  type={card.type}
+                  width={card.width}
+                  length={card.length}
+                  rating={card.rating}
+                  price={card.price}
+                />
+              </View>
+            );
+          }}
+          onSwipedLeft={(cardIndex) => onSwipeLeft(cardIndex)}
+          onSwipedRight={(cardIndex) => onSwipeRight(cardIndex)}
+          cardIndex={0}
+          backgroundColor={"#f0f0f0"}
+          stackSize={3}
+        />
+      </View>
     </>
   );
 };
@@ -279,6 +332,44 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
     borderRadius: 20,
     paddingHorizontal: 15,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
     marginRight: 10,
+  },
+  focusButton: {
+    height: 40,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 15,
+    borderRadius: 20,
+  },
+  buttonText: {
+    color: "white",
+    fontSize: 16,
+  },
+  swiperContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 20,
+    position: "absolute",
+    bottom: 20,
+    left: 0,
+    right: 0,
+  },
+  card: {
+    width: 300,
+    height: 400,
+    borderRadius: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5,
+    backgroundColor: "white",
   },
 });

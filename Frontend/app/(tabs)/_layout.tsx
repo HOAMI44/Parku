@@ -7,15 +7,18 @@ import defaultConfig from '@tamagui/config/v3'
 
 const config = createTamagui(defaultConfig)
 
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function TabLayout() {
+  const { session } = useAuth();
+
   return (
     <TamaguiProvider config={config}>
         <GestureHandlerRootView style={{ flex: 1 }}>
       <Tabs
         screenOptions={{
           headerShown: false,
-          headerTitle: undefined, 
+          headerTitle: undefined,
         }}
       >
         <Tabs.Screen
@@ -28,14 +31,14 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-        name="explore"
-        options={{
-          headerTitle: "Map", // Set the title to "Map"
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="search-outline" size={22} color={color} />
-          ),
-        }}
-      />
+          name="explore"
+          options={{
+            headerTitle: "Map", // Set the title to "Map"
+            tabBarIcon: ({ color }) => (
+              <Ionicons name="search-outline" size={22} color={color} />
+            ),
+          }}
+        />
         <Tabs.Screen
           name="notifications"
           options={{

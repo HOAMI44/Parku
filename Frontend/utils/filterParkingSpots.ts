@@ -17,12 +17,12 @@ export const filterParkingSpots = (
 
     // Filtere nach Länge, wenn festgelegt
     if (filterCriteria.length) {
-      passesLengthFilter = parking.length <= Number(filterCriteria.length);
+      passesLengthFilter = parking.length >= Number(filterCriteria.length);
     }
 
     // Filtere nach Breite, wenn festgelegt
     if (filterCriteria.width) {
-      passesWidthFilter = parking.width <= Number(filterCriteria.width);
+      passesWidthFilter = parking.width >= Number(filterCriteria.width);
     }
 
     // Filtere nach Entfernung, wenn Benutzerstandort vorhanden ist
