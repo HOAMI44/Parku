@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import {
   Platform,
   Pressable,
@@ -6,19 +6,18 @@ import {
   Text,
   View,
   TextInput,
+  TouchableOpacity,
+  Image,
+  ScrollView,
 } from "react-native";
-import MapView, { Callout, Marker, PROVIDER_DEFAULT } from "react-native-maps";
+import MapView, { PROVIDER_DEFAULT, Marker } from "react-native-maps";
 import * as Location from "expo-location";
-import { ScrollView } from "react-native-gesture-handler";
-import { Stack } from "expo-router";
+import { supabase } from "../../lib/supabase";
 import CardMap from "@/components/CardMap";
-import { TamaPopover } from "@/components/TamaPopover";
-import { ChevronUp } from "@tamagui/lucide-icons";
-import { Button, XStack, YStack } from "tamagui";
-import Swiper from "react-native-deck-swiper"; // Import the swiper library
-import { supabase } from "@/lib/supabase";
-
-type Props = {};
+import Icon from "react-native-vector-icons/FontAwesome";
+import { Swipeable } from "react-native-gesture-handler";
+import BottomSheet from "react-native-gesture-bottom-sheet";
+import GestureRecognizer from 'react-native-swipe-gestures';
 
 const INITIAL_REGION = {
   latitude: 47.41375,
@@ -27,100 +26,34 @@ const INITIAL_REGION = {
   longitudeDelta: 0.01,
 };
 
-let testMarkers = [
-  {
-    id: 1,
-    name: "Marker 1",
-    latitude: 47.40793,
-    longitude: 9.74372,
-  },
-  {
-    id: 2,
-    name: "Marker 2",
-    latitude: 47.40747,
-    longitude: 9.74499,
-  },
-  {
-    id: 3,
-    name: "Marker 3",
-    latitude: 47.40862,
-    longitude: 9.74343,
-  },
-  {
-    id: 4,
-    name: "Marker 4",
-    latitude: 47.42665,
-    longitude: 9.7365,
-  },
-  {
-    id: 5,
-    name: "Marker 5",
-    latitude: 47.41776,
-    longitude: 9.73973,
-  },
-];
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+  const R = 6371; // Radius der Erde in km
+  const dLat = deg2rad(lat2 - lat1);
+  const dLon = deg2rad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(deg2rad(lat1)) *
+      Math.cos(deg2rad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+};
+
+const deg2rad = (deg) => {
+  return deg * (Math.PI / 180);
+};
 
 const ExploreScreen = () => {
-  const [location, setLocation] = useState<any>(null);
-  const mapRef = React.useRef<any>(null);
-  const [searchText, setSearchText] = useState<string>("");
-  const [shouldAdapt, setShouldAdapt] = useState(true);
-  const [markers, setMarkers] = useState(testMarkers);
-  const [distance, setDistance] = useState(1);
-  const [activePopover, setActivePopover] = useState<number | null>(null);
-const [parkingSpaces, setParkingSpaces] = useState<any[]>([]);
-
-  // Data for parking spots (dummy data for demonstration)
-  const [parkingSpots, setParkingSpots] = useState([
-    {
-      id: 1,
-      name: "Hotel 1",
-      time: "5:00",
-      type: "Hotel",
-      width: 100,
-      length: 100,
-      rating: 5,
-      price: 100,
-    },
-    {
-      id: 2,
-      name: "Parking Lot 2",
-      time: "6:00",
-      type: "Parking",
-      width: 120,
-      length: 110,
-      rating: 4,
-      price: 80,
-    },
-    {
-      id: 3,
-      name: "Garage 3",
-      time: "7:00",
-      type: "Garage",
-      width: 150,
-      length: 120,
-      rating: 3,
-      price: 90,
-    },
-  ]);
-
-useEffect(() => {
-  const fetchParkingSpaces = async () => {
-    const {data,error} = await supabase
-    .from('parking_spaces')
-    .select('*');
-
-    if(error){
-      console.error("Error fetching parking spaces",error.message);
-    }else{
-      console.log("Parking spaces",data);
-      setParkingSpaces(data);
-      setMarkers(data);
-    }
-  };
-  fetchParkingSpaces();
-  
-}, []);
+  const [location, setLocation] = useState(null);
+  const mapRef = useRef(null);
+  const bottomSheet = useRef(null);
+  const markerRefs = useMemo(() => ({}), []);
+  const [searchText, setSearchText] = useState("");
+  const [parkingData, setParkingData] = useState([]);
+  const [filteredParkingData, setFilteredParkingData] = useState([]);
+  const [highlightedCardId, setHighlightedCardId] = useState(null);
+  const scrollViewRef = useRef(null);
 
   useEffect(() => {
     const requestLocationPermission = async () => {
@@ -136,6 +69,92 @@ useEffect(() => {
     };
     requestLocationPermission();
   }, []);
+
+  useEffect(() => {
+    const fetchParkingSpots = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("parking_spaces")
+          .select("id, address, latitude, longitude, price_per_hour, availability_start, availability_end, is_available, description, width, length, image_url");
+
+        if (error) {
+          console.error("Error fetching parking spots:", error);
+        } else {
+          console.log("Fetched parking spots data:", data);
+          setParkingData(data);
+          setFilteredParkingData(data);
+        }
+      } catch (err) {
+        console.error("Error:", err);
+      }
+    };
+
+    fetchParkingSpots();
+  }, []);
+
+  const handleRemoveCard = (cardId) => {
+    const updatedData = filteredParkingData.filter((item) => item.id !== cardId);
+    setFilteredParkingData(updatedData);
+    if (highlightedCardId === cardId) {
+      setHighlightedCardId(null);
+    }
+  };
+
+  const handleCardFocus = (cardId, latitude, longitude) => {
+    setHighlightedCardId(cardId);
+    mapRef.current.animateToRegion({
+      latitude,
+      longitude,
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
+    });
+    const marker = markerRefs[cardId];
+    if (marker) {
+      marker.showCallout();
+    }
+    if (bottomSheet.current) {
+      bottomSheet.current.close();
+    }
+    setFilteredParkingData((prevData) => {
+      const selectedCard = parkingData.find((item) => item.id === cardId);
+      if (selectedCard) {
+        const otherCards = prevData.filter((item) => item.id !== cardId);
+        return [selectedCard, ...otherCards];
+      }
+      return prevData;
+    });
+
+    // Scroll to the top of the view to focus on the selected card
+    if (scrollViewRef.current) {
+      scrollViewRef.current.scrollTo({ y: 0, animated: true });
+    }
+  };
+
+  const handleMarkerPress = (cardId, latitude, longitude) => {
+    setHighlightedCardId(cardId);
+    mapRef.current.animateToRegion({
+      latitude,
+      longitude,
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
+    });
+    setFilteredParkingData((prevData) => {
+      const selectedCard = parkingData.find((item) => item.id === cardId);
+      if (selectedCard) {
+        const otherCards = prevData.filter((item) => item.id !== cardId);
+        return [selectedCard, ...otherCards];
+      }
+      return prevData;
+    });
+    if (bottomSheet.current) {
+      bottomSheet.current.close();
+    }
+
+    // Scroll to the top of the view to focus on the selected card
+    if (scrollViewRef.current) {
+      scrollViewRef.current.scrollTo({ y: 0, animated: true });
+    }
+  };
 
   const focusMap = () => {
     if (location) {
@@ -156,102 +175,15 @@ useEffect(() => {
     setMarkers(parkingSpaces);
   };
 
-  const handleSearch = () => {
-    handleDistance(distance); // Apply distance filter
-    console.log("Search:", searchText);
-
-   
-
-    const userLatitude = location.coords.latitude;
-    const userLongitude = location.coords.longitude;
-
-    const filteredMarkers = markers.filter((marker) => {
-      const markerDistance = getDistanceFromLatLonInMeters(
-        userLatitude,
-        userLongitude,
-        marker.latitude,
-        marker.longitude
-      );
-      console.log("ASDASD")
-      return (
-        marker.address.toLowerCase().includes(searchText.toLowerCase()) &&
-        markerDistance <= distance * 1000 // Convert `distance` to meters for comparison
-      );
-    });
-
-    setMarkers(filteredMarkers);
-  };
-
-  const handleDistance = async (value: number) => {
-    setDistance(value);
-    if (!location) {
-      console.log("Location not available for distance filtering.");
-      return;
+  const onSwipeUp = () => {
+    if (bottomSheet.current) {
+      bottomSheet.current.show();
     }
-    const userLatitude = location.coords.latitude;
-    const userLongitude = location.coords.longitude;
-    const filteredMarkers = markers.filter((marker) => {
-      const markerDistance = getDistanceFromLatLonInMeters(
-        userLatitude,
-        userLongitude,
-        marker.latitude,
-        marker.longitude
-      );
-      console.log(`Marker ${marker.name} is at ${markerDistance} meters`);
-      return markerDistance <= value * 1000;
-    });
-    setMarkers(filteredMarkers);
-    if (!filteredMarkers.some((marker) => marker.id === activePopover)) {
-      setActivePopover(null);
-    }
-  };
-
-  const getDistanceFromLatLonInMeters = (
-    lat1: number,
-    lon1: number,
-    lat2: number,
-    lon2: number
-  ) => {
-    const deg2rad = (deg: number) => deg * (Math.PI / 180);
-    const R = 6371000; // Radius of the earth in meters
-    const dLat = deg2rad(lat2 - lat1);
-    const dLon = deg2rad(lon2 - lon1);
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(deg2rad(lat1)) *
-        Math.cos(deg2rad(lat2)) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const d = R * c; // Distance in meters
-    return d;
-  };
-
-  // Handle swipe actions
-  const onSwipeLeft = (cardIndex: number) => {
-    console.log("Swiped left on card index:", cardIndex);
-    // Remove the card from the array
-    const newParkingSpots = parkingSpots.filter(
-      (_, index) => index !== cardIndex
-    );
-    setParkingSpots(newParkingSpots);
-  };
-
-  const onSwipeRight = (cardIndex: number) => {
-    console.log("Swiped right on card index:", cardIndex);
-    // You can implement logic for a "yes" swipe here (e.g., adding to favorites)
   };
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          headerTitle: "Map",
-        }}
-      />
-
-      <View style={{ flex: 1 }}>
-        {/* Map Component */}
+    <GestureRecognizer onSwipeUp={onSwipeUp} style={{ flex: 1 }}>
+      <View style={{ flex: 2 / 3 }}>
         <MapView
           style={StyleSheet.absoluteFill}
           provider={PROVIDER_DEFAULT}
@@ -259,39 +191,27 @@ useEffect(() => {
           showsUserLocation
           showsMyLocationButton
           ref={mapRef}
-          onMapReady={focusMap}
         >
-          {markers.map((imarker) => {
-            if (
-              !imarker.latitude ||
-              !imarker.longitude ||
-              typeof imarker.latitude !== "number" ||
-              typeof imarker.longitude !== "number"
-            ) {
-              console.warn("Invalid marker data:", imarker);
-              return null; // Skip invalid markers
-            }
-
-            return (
-              <Marker
-                key={imarker.id}
-                coordinate={{
-                  latitude: imarker.latitude,
-                  longitude: imarker.longitude,
-                }}
-                onPress={() => setActivePopover(imarker.id)}
-              >
-                <Callout style={{height:150,width:180}} onPress={()=>{}}>
-                  <View style={{flex: 1,justifyContent:"space-between"}}>
-                    <Text>{imarker.address}</Text>
-                  </View>
-                </Callout>
-              </Marker>
-            );
-          })}
+          {parkingData.map((parking) => (
+            <Marker
+              key={parking.id}
+              coordinate={{
+                latitude: parking.latitude,
+                longitude: parking.longitude,
+              }}
+              title={parking.address}
+              description={parking.description}
+              pinColor={highlightedCardId === parking.id ? "yellow" : "red"}
+              tracksViewChanges={highlightedCardId === parking.id}
+              onPress={() => handleMarkerPress(parking.id, parking.latitude, parking.longitude)}
+              ref={(ref) => {
+                if (ref) {
+                  markerRefs[parking.id] = ref;
+                }
+              }}
+            />
+          ))}
         </MapView>
-
-        {/* Search Bar and Focus Button */}
         <View style={styles.topControls}>
           <TextInput
             style={styles.searchBar}
@@ -299,65 +219,131 @@ useEffect(() => {
             placeholderTextColor="#999"
             value={searchText}
             onChangeText={setSearchText}
-            onSubmitEditing={handleSearch}
           />
-          <YStack gap="$4">
-            <XStack
-              gap="$2"
-              flex={1}
-              justifyContent="center"
-              alignItems="center"
-            >
-              <TamaPopover
-                shouldAdapt={shouldAdapt}
-                placement="left"
-                Icon={ChevronUp}
-                Name="left-popover"
-                distance={distance}
-                handleDistance={handleDistance}
-              />
-            </XStack>
-          </YStack>
-          <Button color="aliceblue" variant="outlined" onPress={focusMap}>
-            <Text>F</Text>
-          </Button>
-          <Button color="aliceblue" variant="outlined" onPress={handleSearch}>
-            <Text>S</Text>
-          </Button>
-          <Button color="aliceblue" variant="outlined" onPress={resetSearch}>
-            <Text>R</Text>
-          </Button>
+          <Pressable onPress={focusMap} style={styles.focusButton}>
+            <Text style={styles.buttonText}>Focus</Text>
+          </Pressable>
         </View>
       </View>
 
-      {/* Swiper Component for Parking Spots */}
-      <View style={styles.swiperContainer}>
-        <Swiper
-          cards={parkingSpots}
-          renderCard={(card) => {
-            return (
-              <View style={styles.card}>
-                <CardMap
-                  id={card.id}
-                  name={card.name}
-                  time={card.time}
-                  type={card.type}
-                  width={card.width}
-                  length={card.length}
-                  rating={card.rating}
-                  price={card.price}
-                />
-              </View>
-            );
-          }}
-          onSwipedLeft={(cardIndex) => onSwipeLeft(cardIndex)}
-          onSwipedRight={(cardIndex) => onSwipeRight(cardIndex)}
-          cardIndex={0}
-          backgroundColor={"#f0f0f0"}
-          stackSize={3}
-        />
+      <View style={styles.cardListContainer}>
+        {filteredParkingData.length > 0 ? (
+          <ScrollView ref={scrollViewRef} contentContainerStyle={{ alignItems: 'center' }}>
+            {filteredParkingData.map((card) => {
+              const distance = location
+                ? calculateDistance(
+                    location.coords.latitude,
+                    location.coords.longitude,
+                    card.latitude,
+                    card.longitude
+                  ).toFixed(2)
+                : "N/A";
+              return (
+                <Swipeable
+                  key={card.id}
+                  renderRightActions={() => (
+                    <TouchableOpacity
+                      style={styles.noButton}
+                      onPress={() => handleRemoveCard(card.id)}
+                    >
+                      <Icon name="times-circle" size={30} color="white" />
+                    </TouchableOpacity>
+                  )}
+                  renderLeftActions={() => (
+                    <TouchableOpacity
+                      style={styles.yesButton}
+                      onPress={() => handleCardFocus(card.id, card.latitude, card.longitude)}
+                    >
+                      <Icon name="check-circle" size={30} color="white" />
+                    </TouchableOpacity>
+                  )}
+                  onSwipeableRightOpen={() => handleRemoveCard(card.id)}
+                  friction={2}
+                >
+                  <TouchableOpacity onPress={() => handleCardFocus(card.id, card.latitude, card.longitude)}>
+                    <View style={styles.cardWide}>
+                      <Image
+                        source={{ uri: card.image_url }}
+                        style={styles.cardImage}
+                        resizeMode="cover"
+                        onError={(e) => console.error("Error loading image: ", e.nativeEvent.error)}
+                      />
+                      <View style={styles.cardContentOverlay}>
+                        <Text style={{ fontSize: 10, color: "#fff" }}>({distance} km)</Text>
+                        <Text style={styles.cardAddress}>{card.address}</Text>
+                        <Text style={styles.cardDetail}>
+                          Price per hour: €{card.price_per_hour || "N/A"}
+                        </Text>
+                        <Text style={styles.cardDetail}>
+                          Availability: {`${card.availability_start || ""} - ${
+                            card.availability_end || ""
+                          }`}
+                        </Text>
+                        <Text style={styles.cardDetail}>Width: {card.width || "N/A"} m</Text>
+                        <Text style={styles.cardDetail}>Length: {card.length || "N/A"} m</Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                </Swipeable>
+              );
+            })}
+          </ScrollView>
+        ) : (
+          <Text style={{ textAlign: "center", marginTop: 20, fontSize: 18 }}>
+            No parking spots available
+          </Text>
+        )}
       </View>
-    </>
+
+      {/* Bottom Sheet for Viewing All Cards */}
+      <BottomSheet
+        hasDraggableIcon
+        ref={bottomSheet}
+        height={700}
+        onOpen={() => {
+          setHighlightedCardId(null);
+        }}
+      >
+        <ScrollView contentContainerStyle={{ padding: 10, alignItems: 'center' }}>
+          {filteredParkingData.map((card) => {
+            const distance = location
+              ? calculateDistance(
+                  location.coords.latitude,
+                  location.coords.longitude,
+                  card.latitude,
+                  card.longitude
+                ).toFixed(2)
+              : "N/A";
+            return (
+              <TouchableOpacity key={card.id} onPress={() => handleCardFocus(card.id, card.latitude, card.longitude)}>
+                <View style={[styles.cardWide, { marginBottom: 10 }]}>
+                  <Image
+                    source={{ uri: card.image_url }}
+                    style={styles.cardImage}
+                    resizeMode="cover"
+                    onError={(e) => console.error("Error loading image: ", e.nativeEvent.error)}
+                  />
+                  <View style={styles.cardContentOverlay}>
+                    <Text style={{ fontSize: 10, color: "#fff" }}>({distance} km)</Text>
+                    <Text style={styles.cardAddress}>{card.address}</Text>
+                    <Text style={styles.cardDetail}>
+                      Price per hour: €{card.price_per_hour || "N/A"}
+                    </Text>
+                    <Text style={styles.cardDetail}>
+                      Availability: {`${card.availability_start || ""} - ${
+                        card.availability_end || ""
+                      }`}
+                    </Text>
+                    <Text style={styles.cardDetail}>Width: {card.width || "N/A"} m</Text>
+                    <Text style={styles.cardDetail}>Length: {card.length || "N/A"} m</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </BottomSheet>
+    </GestureRecognizer>
   );
 };
 
@@ -398,25 +384,69 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 16,
   },
-  swiperContainer: {
-    flex: 1,
-    justifyContent: "center",
+  cardListContainer: {
+    flex: 1 / 3,
+    backgroundColor: "#f8f8f8",
+    paddingVertical: 10,
     alignItems: "center",
-    paddingVertical: 20,
-    position: "absolute",
-    bottom: 20,
-    left: 0,
-    right: 0,
+    zIndex: 10,
   },
-  card: {
-    width: 300,
-    height: 400,
-    borderRadius: 10,
+  cardWide: {
+    width: 350,
+    height: 250,
+    borderRadius: 20,
+    padding: 0,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
     elevation: 5,
-    backgroundColor: "white",
+    marginBottom: 20,
+    overflow: "hidden",
+  },
+  cardImage: {
+    width: "100%",
+    height: "100%",
+    position: "absolute",
+    top: 0,
+    left: 0,
+  },
+  cardContentOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    borderRadius: 20,
+    padding: 15,
+    justifyContent: "flex-end",
+  },
+  cardTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#fff",
+    marginBottom: 5,
+  },
+  cardAddress: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#fff",
+    marginBottom: 5,
+  },
+  cardDetail: {
+    fontSize: 14,
+    color: "#fff",
+    marginBottom: 3,
+  },
+  noButton: {
+    backgroundColor: "#ff6b6b",
+    padding: 15,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  yesButton: {
+    backgroundColor: "#4caf50",
+    padding: 15,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
