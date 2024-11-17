@@ -18,6 +18,7 @@ import {
   useGetAllParkingSpacesWithName,
 } from "@/hooks/database/queries";
 import useLocation from "@/hooks/useLocation";
+import { calculateDistance } from "@/utils/calculateDistance";
 
 type FilterCriteria = {
   userLocation?: {
@@ -70,6 +71,17 @@ const HomeScreen = (): JSX.Element => {
     setFilterVisible(false);
   };
 
+  const getDistanceForSpace = (space: ParkingSpaceWithName): string | undefined => {
+    if (!userLocation) return undefined;
+    
+    return calculateDistance(
+      userLocation.coords.latitude,
+      userLocation.coords.longitude,
+      space.latitude,
+      space.longitude
+    ).toFixed(1);
+  };
+
   useEffect(() => {
     if (userLocation && parkingSpaces) {
       const nearbyParking = filterParkingSpots(parkingSpaces, {
@@ -113,7 +125,17 @@ const HomeScreen = (): JSX.Element => {
         </View>
       </View>
       <ParkingSpaceList
-        parkingSpaces={filteredParkingSpaces}
+        parkingSpaces={filteredParkingSpaces.map(space => ({
+          ...space,
+          distance: userLocation 
+            ? calculateDistance(
+                userLocation.coords.latitude,
+                userLocation.coords.longitude,
+                space.latitude,
+                space.longitude
+              ).toFixed(1)
+            : undefined
+        }))}
         noResultsText="No parking spaces match your filter criteria."
       />
       <FilterPopup

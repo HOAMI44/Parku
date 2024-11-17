@@ -1,31 +1,28 @@
 import { StyleSheet, Text, TouchableOpacity, View, Image, Dimensions } from "react-native";
 import React from "react";
 import { ParkingSpaceWithName } from "@/types/types";
-import { useRouter } from "expo-router";
 
 type ParkingSpaceCardProps = {
   parkingSpace: ParkingSpaceWithName;
+  distance?: string;
 };
 
-const ParkingSpaceCard = ({ parkingSpace }: ParkingSpaceCardProps) => {
-  const router = useRouter();
-
+const ParkingSpaceCard = ({ parkingSpace, distance }: ParkingSpaceCardProps) => {
   return (
-    <TouchableOpacity 
-      style={styles.parkingSpace} 
-      onPress={() => router.push({
-        pathname: "/ParkingDetails",
-        params: { parkingSpace: JSON.stringify(parkingSpace) }
-      })}
-    >
+    <TouchableOpacity style={styles.parkingSpace}>
       <Image
         source={{ uri: parkingSpace.image_url }}
         style={styles.parkingImage}
       />
       <View style={styles.parkingDetails}>
-        <Text numberOfLines={1} style={styles.parkingAddress}>
-          {parkingSpace.address}
-        </Text>
+        <View style={styles.headerRow}>
+          <Text numberOfLines={1} style={styles.parkingAddress}>
+            {parkingSpace.address}
+          </Text>
+          {distance && (
+            <Text style={styles.distance}>{distance} km</Text>
+          )}
+        </View>
         <Text
           numberOfLines={1}
           style={styles.parkingUserFullName}
@@ -55,28 +52,40 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 15,
     backgroundColor: "white",
+    width: '100%',
   },
   parkingImage: {
     width: "100%",
-    aspectRatio: 21 / 9,
+    aspectRatio: 21 / 9, // Making it slightly shorter
     borderTopLeftRadius: 10,
     borderTopRightRadius: 10,
   },
   parkingDetails: {
-    padding: 10,
+    padding: 8, // Reduced padding
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 2,
   },
   parkingAddress: {
-    fontSize: 16,
+    fontSize: 14, // Slightly smaller
     fontWeight: "bold",
-    marginBottom: 4,
+    flex: 1,
+  },
+  distance: {
+    fontSize: 12,
+    color: '#666',
+    marginLeft: 8,
   },
   parkingUserFullName: {
-    fontSize: 14,
+    fontSize: 13, // Slightly smaller
     color: "#666",
-    marginBottom: 4,
+    marginBottom: 2,
   },
   parkingPricePerHour: {
-    fontSize: 14,
+    fontSize: 13, // Slightly smaller
     fontWeight: "500",
     color: "#2E8B57",
   },
@@ -85,7 +94,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   dimensions: {
-    fontSize: 14,
+    fontSize: 13, // Slightly smaller
     fontWeight: "500",
   }
 });

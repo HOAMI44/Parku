@@ -23,6 +23,8 @@ import { useRouter } from "expo-router";
 import { GestureHandlerRootView, RectButton } from 'react-native-gesture-handler';
 import Animated from 'react-native';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+import ParkingSpaceCard from "@/components/ParkingSpaceCard";
+import { calculateDistance } from "../../utils/calculateDistance";
 
 interface ParkingSpace {
   id: number;
@@ -37,6 +39,10 @@ interface ParkingSpace {
   width: number;
   length: number;
   image_url: string;
+  users: {
+    first_name: string;
+    last_name: string;
+  };
 }
 
 interface MarkerRefs {
@@ -48,24 +54,6 @@ const INITIAL_REGION = {
   longitude: 9.74151,
   latitudeDelta: 0.01,
   longitudeDelta: 0.01,
-};
-
-const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-  const R = 6371; // Radius der Erde in km
-  const dLat = deg2rad(lat2 - lat1);
-  const dLon = deg2rad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(deg2rad(lat1)) *
-      Math.cos(deg2rad(lat2)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-};
-
-const deg2rad = (deg: number) => {
-  return deg * (Math.PI / 180);
 };
 
 const ExploreScreen = () => {
@@ -100,9 +88,13 @@ const ExploreScreen = () => {
       try {
         const { data, error } = await supabase
           .from("parking_spaces")
-          .select(
-            "id, address, latitude, longitude, price_per_hour, availability_start, availability_end, is_available, description, width, length, image_url"
-          );
+          .select(`
+            *,
+            users:user_id (
+              first_name,
+              last_name
+            )
+          `);
 
         if (error) {
           console.error("Error fetching parking spots:", error);
@@ -195,12 +187,15 @@ const ExploreScreen = () => {
 
   const handleCardFocus = (cardId: number, latitude: number, longitude: number): void => {
     setHighlightedCardId(cardId);
+    
+    // Adjust the region to center the marker with some padding
     mapRef.current?.animateToRegion({
-      latitude,
-      longitude,
-      latitudeDelta: 0.01,
-      longitudeDelta: 0.01,
+      latitude: latitude - 0.002, // Offset latitude to account for the bottom card list
+      longitude: longitude,
+      latitudeDelta: 0.008,      // Slightly zoomed in view
+      longitudeDelta: 0.008,
     });
+
     const marker = markerRefs[cardId];
     if (marker) {
       marker.showCallout();
@@ -208,6 +203,7 @@ const ExploreScreen = () => {
     if (bottomSheet.current) {
       bottomSheet.current.close();
     }
+    
     setFilteredParkingData((prevData) => {
       const selectedCard = parkingData.find((item) => item.id === cardId);
       if (selectedCard) {
@@ -217,7 +213,6 @@ const ExploreScreen = () => {
       return prevData;
     });
 
-    // Scroll to the top of the view to focus on the selected card
     if (scrollViewRef.current) {
       scrollViewRef.current.scrollTo({ y: 0, animated: true });
     }
@@ -225,12 +220,15 @@ const ExploreScreen = () => {
 
   const handleMarkerPress = (cardId: number, latitude: number, longitude: number): void => {
     setHighlightedCardId(cardId);
+    
+    // Use the same centering logic as handleCardFocus
     mapRef.current?.animateToRegion({
-      latitude,
-      longitude,
-      latitudeDelta: 0.01,
-      longitudeDelta: 0.01,
+      latitude: latitude - 0.002,
+      longitude: longitude,
+      latitudeDelta: 0.008,
+      longitudeDelta: 0.008,
     });
+
     setFilteredParkingData((prevData) => {
       const selectedCard = parkingData.find((item) => item.id === cardId);
       if (selectedCard) {
@@ -239,11 +237,11 @@ const ExploreScreen = () => {
       }
       return prevData;
     });
+
     if (bottomSheet.current) {
       bottomSheet.current.close();
     }
 
-    // Scroll to the top of the view to focus on the selected card
     if (scrollViewRef.current) {
       scrollViewRef.current.scrollTo({ y: 0, animated: true });
     }
@@ -281,63 +279,52 @@ const ExploreScreen = () => {
     });
   };
 
-  const renderCard = (card: ParkingSpace, distance: string) => {
-    const renderRightActions = (_, dragX: any) => (
-      <TouchableOpacity 
-        style={styles.deleteAction}
-        onPress={() => handleRemoveCard(card.id)}
-      >
-        <View style={styles.actionContent}>
-          <Icon name="trash" size={24} color="white" />
-          <Text style={styles.actionText}>Remove</Text>
-        </View>
-      </TouchableOpacity>
-    );
-
-    const renderLeftActions = (_, dragX: any) => (
-      <TouchableOpacity 
-        style={styles.detailsAction}
-        onPress={() => handleNavigateToDetails(card.id)}
-      >
-        <View style={styles.actionContent}>
-          <Icon name="info-circle" size={24} color="white" />
-          <Text style={styles.actionText}>Details</Text>
-        </View>
-      </TouchableOpacity>
-    );
+  const renderCard = (card: ParkingSpace) => {
+    const distance = location
+      ? calculateDistance(
+          location.coords.latitude,
+          location.coords.longitude,
+          card.latitude,
+          card.longitude
+        ).toFixed(1)
+      : undefined;
 
     return (
       <GestureHandlerRootView key={card.id} style={styles.cardContainer}>
         <Swipeable
-          renderRightActions={renderRightActions}
-          renderLeftActions={renderLeftActions}
+          renderRightActions={() => (
+            <TouchableOpacity 
+              style={[styles.swipeAction, styles.deleteAction]}
+              onPress={() => handleRemoveCard(card.id)}
+            >
+              <View style={styles.actionContent}>
+                <Icon name="trash" size={24} color="white" />
+                <Text style={styles.actionText}>Remove</Text>
+              </View>
+            </TouchableOpacity>
+          )}
+          renderLeftActions={() => (
+            <TouchableOpacity 
+              style={[styles.swipeAction, styles.detailsAction]}
+              onPress={() => handleNavigateToDetails(card.id)}
+            >
+              <View style={styles.actionContent}>
+                <Icon name="info-circle" size={24} color="white" />
+                <Text style={styles.actionText}>Details</Text>
+              </View>
+            </TouchableOpacity>
+          )}
           overshootRight={false}
           overshootLeft={false}
         >
           <TouchableOpacity
-            activeOpacity={0.9}
+            activeOpacity={0.95}
             onPress={() => handleCardFocus(card.id, card.latitude, card.longitude)}
           >
-            <View style={styles.card}>
-              <Image
-                source={{ uri: card.image_url }}
-                style={styles.cardImage}
-                resizeMode="cover"
-              />
-              <View style={styles.cardContent}>
-                <Text style={styles.distance}>({distance} km)</Text>
-                <Text style={styles.address} numberOfLines={1}>{card.address}</Text>
-                <Text style={styles.price}>€{card.price_per_hour}/hour</Text>
-                <View style={styles.detailsRow}>
-                  <Text style={styles.details}>
-                    {card.width}m × {card.length}m
-                  </Text>
-                  <Text style={styles.details}>
-                    {card.availability_start} - {card.availability_end}
-                  </Text>
-                </View>
-              </View>
-            </View>
+            <ParkingSpaceCard 
+              parkingSpace={card} 
+              distance={distance}
+            />
           </TouchableOpacity>
         </Swipeable>
       </GestureHandlerRootView>
@@ -424,9 +411,9 @@ const ExploreScreen = () => {
                     location.coords.longitude,
                     card.latitude,
                     card.longitude
-                  ).toFixed(2)
+                  ).toFixed(1)
                 : "N/A";
-              return renderCard(card, distance);
+              return renderCard(card);
             })}
           </ScrollView>
         ) : (
@@ -461,7 +448,7 @@ const ExploreScreen = () => {
                   location.coords.longitude,
                   card.latitude,
                   card.longitude
-                ).toFixed(2)
+                ).toFixed(1)
               : "N/A";
             return (
               <TouchableOpacity
@@ -554,82 +541,39 @@ const styles = StyleSheet.create({
   },
   cardListContainer: {
     flex: 1 / 3,
+    width: "100%",
     backgroundColor: "#f8f8f8",
     paddingVertical: 10,
     alignItems: "center",
     zIndex: 10,
   },
   cardContainer: {
+    marginHorizontal: 12,
     marginBottom: 12,
-    borderRadius: 12,
+    borderRadius: 16,
     overflow: 'hidden',
-    backgroundColor: '#f0f0f0',
+    width: "auto",
   },
-  card: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    overflow: 'hidden',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  cardImage: {
-    width: '100%',
-    height: 120,
-    backgroundColor: '#f0f0f0',
-  },
-  cardContent: {
-    padding: 12,
-  },
-  distance: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
-  },
-  address: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  price: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#2196F3',
-    marginBottom: 8,
-  },
-  detailsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  details: {
-    fontSize: 13,
-    color: '#666',
+  swipeAction: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 90,
+    height: '100%',
   },
   deleteAction: {
-    backgroundColor: '#ff4444',
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: 70,
-    height: '100%',
+    backgroundColor: '#FF3B30',
   },
   detailsAction: {
-    backgroundColor: '#2196F3',
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: 70,
-    height: '100%',
+    backgroundColor: '#007AFF',
   },
   actionContent: {
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 6,
   },
   actionText: {
     color: 'white',
-    fontSize: 11,
-    marginTop: 4,
+    fontSize: 13,
     fontWeight: '600',
   },
   scrollContent: {
