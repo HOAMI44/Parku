@@ -9,14 +9,16 @@ import {
   Modal,
   Alert,
   Dimensions,
+  Platform,
 } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import { Button } from 'react-native-paper';
 import { ParkingSpace } from "../types/types";
 import { formatCurrency, formatDate, formatTime } from "../utils/formatters";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const ParkingDetails = (): JSX.Element => {
   const router = useRouter();
@@ -28,9 +30,19 @@ const ParkingDetails = (): JSX.Element => {
   const [startTime, setStartTime] = useState(new Date());
   const [endTime, setEndTime] = useState(new Date());
   const [loading, setLoading] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedTime, setSelectedTime] = useState(new Date());
+  const [showStartDate, setShowStartDate] = useState(false);
+  const [showStartTime, setShowStartTime] = useState(false);
+  const [showEndDate, setShowEndDate] = useState(false);
+  const [showEndTime, setShowEndTime] = useState(false);
 
   const availabilityStart = new Date(parkingSpace.availability_start);
-  const availabilityEnd = new Date(parkingSpace.availability_end);
+const availabilityEnd = new Date(parkingSpace.availability_end);
+
+if (isNaN(availabilityStart.getTime()) || isNaN(availabilityEnd.getTime())) {
+    console.error("Invalid availability dates");
+  }
 
   const handleBookButtonPress = () => {
     if (!session) {
@@ -47,7 +59,7 @@ const ParkingDetails = (): JSX.Element => {
   };
 
   const validateTimeSelection = async () => {
-    if (startTime < availabilityStart || endTime > availabilityEnd) {
+    if (startTime.getTime() < availabilityStart.getTime() || endTime.getTime() > availabilityEnd.getTime()) {
       Alert.alert(
         "Invalid Time Selection",
         "Please select times within the parking space's availability window."
@@ -55,7 +67,7 @@ const ParkingDetails = (): JSX.Element => {
       return false;
     }
 
-    if (endTime <= startTime) {
+    if (endTime.getTime() <= startTime.getTime()) {
       Alert.alert(
         "Invalid Time Selection",
         "End time must be after start time."
@@ -114,7 +126,7 @@ const ParkingDetails = (): JSX.Element => {
             start_time: startTime.toISOString(),
             end_time: endTime.toISOString(),
             total_price: totalPrice,
-            status: "confirmed",
+            status: "completed",
           },
         ])
         .select()
@@ -152,6 +164,102 @@ const ParkingDetails = (): JSX.Element => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // iOS specific component
+  const IOSTimePicker = ({ startTime, endTime, handleStartChange, handleEndChange }) => (
+    <>
+      <View style={styles.timeSection}>
+        <Text style={styles.timeSectionTitle}>Start Time</Text>
+        <DateTimePicker
+          value={startTime}
+          mode="datetime"
+          minimumDate={new Date(availabilityStart)}
+          maximumDate={new Date(availabilityEnd)}
+          onChange={handleStartChange}
+          display="compact"
+          style={styles.dateTimePicker}
+        />
+      </View>
+
+      <View style={styles.timeSection}>
+        <Text style={styles.timeSectionTitle}>End Time</Text>
+        <DateTimePicker
+          value={endTime}
+          mode="datetime"
+          minimumDate={startTime}
+          maximumDate={new Date(availabilityEnd)}
+          onChange={handleEndChange}
+          display="compact"
+          style={styles.dateTimePicker}
+        />
+      </View>
+    </>
+  );
+
+  // Android/other platforms component
+  const DefaultTimePicker = ({ startTime, endTime, setShowStartDate, setShowStartTime, setShowEndDate, setShowEndTime }) => (
+    <>
+      <View style={styles.timeSection}>
+        <Text style={styles.timeSectionTitle}>Start Time</Text>
+        <View style={styles.dateTimeContainer}>
+          <TouchableOpacity 
+            style={styles.dateTimeButton}
+            onPress={() => setShowStartDate(true)}
+          >
+            <Ionicons name="calendar-outline" size={20} color="#666" />
+            <Text style={styles.dateTimeText}>
+              {startTime.toLocaleDateString()}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.dateTimeButton}
+            onPress={() => setShowStartTime(true)}
+          >
+            <Ionicons name="time-outline" size={20} color="#666" />
+            <Text style={styles.dateTimeText}>
+              {startTime.toLocaleTimeString().slice(0, 5)}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.timeSection}>
+        <Text style={styles.timeSectionTitle}>End Time</Text>
+        <View style={styles.dateTimeContainer}>
+          <TouchableOpacity 
+            style={styles.dateTimeButton}
+            onPress={() => setShowEndDate(true)}
+          >
+            <Ionicons name="calendar-outline" size={20} color="#666" />
+            <Text style={styles.dateTimeText}>
+              {endTime.toLocaleDateString()}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.dateTimeButton}
+            onPress={() => setShowEndTime(true)}
+          >
+            <Ionicons name="time-outline" size={20} color="#666" />
+            <Text style={styles.dateTimeText}>
+              {endTime.toLocaleTimeString().slice(0, 5)}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </>
+  );
+
+  // In your main component, use Platform.select
+  const TimePicker = Platform.select({
+    ios: IOSTimePicker,
+    default: DefaultTimePicker,
+  });
+
+  // Add this function to calculate hours between two dates
+  const calculateHours = (start: Date, end: Date) => {
+    const diffInMs = end.getTime() - start.getTime();
+    return diffInMs / (1000 * 60 * 60); // Convert ms to hours
   };
 
   return (
@@ -241,30 +349,52 @@ const ParkingDetails = (): JSX.Element => {
               </Text>
             </View>
 
-            <View style={styles.timePickerContainer}>
-              <Text style={styles.timeLabel}>Start Time:</Text>
-              <DateTimePicker
-                value={startTime}
-                mode="datetime"
-                minimumDate={availabilityStart}
-                maximumDate={availabilityEnd}
-                onChange={(event, selectedDate) => {
-                  if (selectedDate) setStartTime(selectedDate);
-                }}
-              />
-            </View>
+            <TimePicker
+              startTime={startTime}
+              endTime={endTime}
+              handleStartChange={(event, date) => {
+                if (date) setStartTime(date);
+              }}
+              handleEndChange={(event, date) => {
+                if (date) setEndTime(date);
+              }}
+              setShowStartDate={setShowStartDate}
+              setShowStartTime={setShowStartTime}
+              setShowEndDate={setShowEndDate}
+              setShowEndTime={setShowEndTime}
+            />
 
-            <View style={styles.timePickerContainer}>
-              <Text style={styles.timeLabel}>End Time:</Text>
-              <DateTimePicker
-                value={endTime}
-                mode="datetime"
-                minimumDate={startTime}
-                maximumDate={availabilityEnd}
-                onChange={(event, selectedDate) => {
-                  if (selectedDate) setEndTime(selectedDate);
-                }}
-              />
+            {/* For Android, keep the hidden DateTimePickers */}
+            {Platform.OS === 'android' && (
+              <>
+                {showStartDate && (
+                  <DateTimePicker
+                    value={startTime}
+                    mode="date"
+                    minimumDate={new Date(availabilityStart)}
+                    maximumDate={new Date(availabilityEnd)}
+                    onChange={(event, selectedDate) => {
+                      setShowStartDate(false);
+                      if (selectedDate) {
+                        const newDate = new Date(selectedDate);
+                        newDate.setHours(startTime.getHours(), startTime.getMinutes());
+                        setStartTime(newDate);
+                      }
+                    }}
+                  />
+                )}
+                {/* ... other Android DateTimePickers ... */}
+              </>
+            )}
+
+            <View style={styles.totalPriceContainer}>
+              <Text style={styles.totalPriceLabel}>Total Price:</Text>
+              <Text style={styles.totalPriceAmount}>
+                {formatCurrency(calculateHours(startTime, endTime) * parkingSpace.price_per_hour)}
+              </Text>
+              <Text style={styles.totalPriceDetails}>
+                for {Math.ceil(calculateHours(startTime, endTime))} hours
+              </Text>
             </View>
 
             <View style={styles.modalButtons}>
@@ -276,11 +406,7 @@ const ParkingDetails = (): JSX.Element => {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[
-                  styles.modalButton,
-                  styles.confirmButton,
-                  loading && styles.buttonDisabled,
-                ]}
+                style={[styles.modalButton, styles.confirmButton]}
                 onPress={handleBooking}
                 disabled={loading}
               >
@@ -398,47 +524,76 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.5)",
   },
   modalContent: {
-    backgroundColor: "white",
+    backgroundColor: 'white',
     padding: 20,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 20,
-    textAlign: "center",
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
   },
-  timePickerContainer: {
-    marginBottom: 20,
+  closeButton: {
+    padding: 4,
   },
-  timeLabel: {
+  priceInfo: {
+    backgroundColor: '#f5f5f5',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 32,
+  },
+  priceInfoText: {
+    fontSize: 18,
+    color: '#333',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  timeSection: {
+    marginBottom: 24,
+  },
+  timeSectionTitle: {
     fontSize: 16,
+    color: '#666',
     marginBottom: 8,
-    color: "#666",
+    fontWeight: '500',
+  },
+  timeDisplay: {
+    fontSize: 20,
+    color: '#333',
+    fontWeight: '600',
+    paddingVertical: 8,
   },
   modalButtons: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 20,
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
   },
   modalButton: {
     flex: 1,
-    padding: 15,
-    borderRadius: 10,
-    marginHorizontal: 5,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
   },
   cancelButton: {
-    backgroundColor: "#ff4444",
+    backgroundColor: '#ff4444',
   },
   confirmButton: {
-    backgroundColor: "#82DFF1",
+    backgroundColor: '#82DFF1',
   },
   modalButtonText: {
-    color: "white",
-    textAlign: "center",
+    color: 'white',
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
   bookButtonDisabled: {
     backgroundColor: "#ccc",
@@ -446,25 +601,49 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     opacity: 0.7,
   },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
+  dateTimeContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
   },
-  closeButton: {
-    padding: 5,
-  },
-  priceInfo: {
-    backgroundColor: "#f5f5f5",
-    padding: 10,
+  dateTimeButton: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+    padding: 12,
     borderRadius: 8,
-    marginBottom: 20,
+    alignItems: 'center',
   },
-  priceInfoText: {
+  dateTimeText: {
     fontSize: 16,
-    color: "#666",
-    textAlign: "center",
+    color: '#333',
+    fontWeight: '500',
+  },
+  dateTimePicker: {
+    height: 40,
+    marginTop: 8,
+  },
+  totalPriceContainer: {
+    backgroundColor: '#f8f9fa',
+    padding: 15,
+    borderRadius: 12,
+    marginTop: 20,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  totalPriceLabel: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 4,
+  },
+  totalPriceAmount: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 4,
+  },
+  totalPriceDetails: {
+    fontSize: 14,
+    color: '#666',
   },
 });
 

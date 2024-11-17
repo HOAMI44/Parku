@@ -10,7 +10,7 @@ import {
   Image,
   ScrollView,
 } from "react-native";
-import MapView, { PROVIDER_DEFAULT, Marker } from "react-native-maps";
+import MapView, { PROVIDER_DEFAULT, Marker, Region } from "react-native-maps";
 import * as Location from "expo-location";
 import { supabase } from "../../lib/supabase";
 import CardMap from "@/components/CardMap";
@@ -18,6 +18,29 @@ import Icon from "react-native-vector-icons/FontAwesome";
 import { Swipeable } from "react-native-gesture-handler";
 import BottomSheet from "react-native-gesture-bottom-sheet";
 import GestureRecognizer from "react-native-swipe-gestures";
+import { Marker as RNMarker } from 'react-native-maps';
+import { useRouter } from "expo-router";
+import { GestureHandlerRootView, RectButton } from 'react-native-gesture-handler';
+import Animated from 'react-native';
+
+interface ParkingSpace {
+  id: number;
+  address: string;
+  latitude: number;
+  longitude: number;
+  price_per_hour: number;
+  availability_start: string;
+  availability_end: string;
+  is_available: boolean;
+  description: string;
+  width: number;
+  length: number;
+  image_url: string;
+}
+
+interface MarkerRefs {
+  [key: number]: RNMarker | null;
+}
 
 const INITIAL_REGION = {
   latitude: 47.41375,
@@ -26,7 +49,7 @@ const INITIAL_REGION = {
   longitudeDelta: 0.01,
 };
 
-const calculateDistance = (lat1, lon1, lat2, lon2) => {
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
   const R = 6371; // Radius der Erde in km
   const dLat = deg2rad(lat2 - lat1);
   const dLon = deg2rad(lon2 - lon1);
@@ -40,20 +63,21 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
   return R * c;
 };
 
-const deg2rad = (deg) => {
+const deg2rad = (deg: number) => {
   return deg * (Math.PI / 180);
 };
 
 const ExploreScreen = () => {
-  const [location, setLocation] = useState(null);
-  const mapRef = useRef(null);
-  const bottomSheet = useRef(null);
-  const markerRefs = useMemo(() => ({}), []);
+  const router = useRouter();
+  const [location, setLocation] = useState<Location.LocationObject | null>(null);
+  const mapRef = useRef<MapView>(null);
+  const bottomSheet = useRef<BottomSheet>(null);
+  const markerRefs = useMemo<MarkerRefs>(() => ({}), []);
   const [searchText, setSearchText] = useState("");
-  const [parkingData, setParkingData] = useState([]);
-  const [filteredParkingData, setFilteredParkingData] = useState([]);
-  const [highlightedCardId, setHighlightedCardId] = useState(null);
-  const scrollViewRef = useRef(null);
+  const [parkingData, setParkingData] = useState<ParkingSpace[]>([]);
+  const [filteredParkingData, setFilteredParkingData] = useState<ParkingSpace[]>([]);
+  const [highlightedCardId, setHighlightedCardId] = useState<number | null>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     const requestLocationPermission = async () => {
@@ -94,7 +118,18 @@ const ExploreScreen = () => {
     fetchParkingSpots();
   }, []);
 
-  const handleRemoveCard = (cardId) => {
+  useEffect(() => {
+    if (searchText.trim() === '') {
+      setFilteredParkingData(parkingData);
+    } else {
+      const filtered = parkingData.filter(spot => 
+        spot.address.toLowerCase().includes(searchText.toLowerCase())
+      );
+      setFilteredParkingData(filtered);
+    }
+  }, [searchText, parkingData]);
+
+  const handleRemoveCard = (cardId: number) => {
     const updatedData = filteredParkingData.filter(
       (item) => item.id !== cardId
     );
@@ -104,9 +139,9 @@ const ExploreScreen = () => {
     }
   };
 
-  const handleCardFocus = (cardId, latitude, longitude) => {
+  const handleCardFocus = (cardId: number, latitude: number, longitude: number): void => {
     setHighlightedCardId(cardId);
-    mapRef.current.animateToRegion({
+    mapRef.current?.animateToRegion({
       latitude,
       longitude,
       latitudeDelta: 0.01,
@@ -134,9 +169,9 @@ const ExploreScreen = () => {
     }
   };
 
-  const handleMarkerPress = (cardId, latitude, longitude) => {
+  const handleMarkerPress = (cardId: number, latitude: number, longitude: number): void => {
     setHighlightedCardId(cardId);
-    mapRef.current.animateToRegion({
+    mapRef.current?.animateToRegion({
       latitude,
       longitude,
       latitudeDelta: 0.01,
@@ -168,7 +203,7 @@ const ExploreScreen = () => {
         latitudeDelta: 0.01,
         longitudeDelta: 0.01,
       };
-      mapRef.current.animateToRegion(currentLocation);
+      mapRef.current?.animateToRegion(currentLocation);
     } else {
       console.log("Location not available");
     }
@@ -176,13 +211,83 @@ const ExploreScreen = () => {
 
   const resetSearch = () => {
     setSearchText("");
-    setMarkers(parkingSpaces);
+    setFilteredParkingData(parkingData);
   };
 
   const onSwipeUp = () => {
     if (bottomSheet.current) {
       bottomSheet.current.show();
     }
+  };
+
+  const handleNavigateToDetails = (cardId: number) => {
+    router.push({
+      pathname: '/ParkingDetails',
+      params: { parkingSpace: JSON.stringify(parkingData.find(spot => spot.id === cardId)) }
+    });
+  };
+
+  const renderCard = (card: ParkingSpace, distance: string) => {
+    const renderRightActions = (_, dragX: any) => (
+      <TouchableOpacity 
+        style={styles.deleteAction}
+        onPress={() => handleRemoveCard(card.id)}
+      >
+        <View style={styles.actionContent}>
+          <Icon name="trash" size={24} color="white" />
+          <Text style={styles.actionText}>Remove</Text>
+        </View>
+      </TouchableOpacity>
+    );
+
+    const renderLeftActions = (_, dragX: any) => (
+      <TouchableOpacity 
+        style={styles.detailsAction}
+        onPress={() => handleNavigateToDetails(card.id)}
+      >
+        <View style={styles.actionContent}>
+          <Icon name="info-circle" size={24} color="white" />
+          <Text style={styles.actionText}>Details</Text>
+        </View>
+      </TouchableOpacity>
+    );
+
+    return (
+      <GestureHandlerRootView key={card.id} style={styles.cardContainer}>
+        <Swipeable
+          renderRightActions={renderRightActions}
+          renderLeftActions={renderLeftActions}
+          overshootRight={false}
+          overshootLeft={false}
+        >
+          <TouchableOpacity
+            activeOpacity={0.9}
+            onPress={() => handleCardFocus(card.id, card.latitude, card.longitude)}
+          >
+            <View style={styles.card}>
+              <Image
+                source={{ uri: card.image_url }}
+                style={styles.cardImage}
+                resizeMode="cover"
+              />
+              <View style={styles.cardContent}>
+                <Text style={styles.distance}>({distance} km)</Text>
+                <Text style={styles.address} numberOfLines={1}>{card.address}</Text>
+                <Text style={styles.price}>€{card.price_per_hour}/hour</Text>
+                <View style={styles.detailsRow}>
+                  <Text style={styles.details}>
+                    {card.width}m × {card.length}m
+                  </Text>
+                  <Text style={styles.details}>
+                    {card.availability_start} - {card.availability_end}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </TouchableOpacity>
+        </Swipeable>
+      </GestureHandlerRootView>
+    );
   };
 
   return (
@@ -223,13 +328,23 @@ const ExploreScreen = () => {
           ))}
         </MapView>
         <View style={styles.topControls}>
-          <TextInput
-            style={styles.searchBar}
-            placeholder="Search location"
-            placeholderTextColor="#999"
-            value={searchText}
-            onChangeText={setSearchText}
-          />
+          <View style={styles.searchContainer}>
+            <TextInput
+              style={styles.searchBar}
+              placeholder="Search location"
+              placeholderTextColor="#999"
+              value={searchText}
+              onChangeText={setSearchText}
+            />
+            {searchText !== "" && (
+              <TouchableOpacity 
+                style={styles.clearButton} 
+                onPress={resetSearch}
+              >
+                <Icon name="times" size={20} color="#999" />
+              </TouchableOpacity>
+            )}
+          </View>
           <Pressable onPress={focusMap} style={styles.focusButton}>
             <Text style={styles.buttonText}>Focus</Text>
           </Pressable>
@@ -240,7 +355,8 @@ const ExploreScreen = () => {
         {filteredParkingData.length > 0 ? (
           <ScrollView
             ref={scrollViewRef}
-            contentContainerStyle={{ alignItems: "center" }}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
           >
             {filteredParkingData.map((card) => {
               const distance = location
@@ -251,72 +367,7 @@ const ExploreScreen = () => {
                     card.longitude
                   ).toFixed(2)
                 : "N/A";
-              return (
-                <Swipeable
-                  key={card.id}
-                  renderRightActions={() => (
-                    <TouchableOpacity
-                      style={styles.noButton}
-                      onPress={() => handleRemoveCard(card.id)}
-                    >
-                      <Icon name="times-circle" size={30} color="white" />
-                    </TouchableOpacity>
-                  )}
-                  renderLeftActions={() => (
-                    <TouchableOpacity
-                      style={styles.yesButton}
-                      onPress={() =>
-                        handleCardFocus(card.id, card.latitude, card.longitude)
-                      }
-                    >
-                      <Icon name="check-circle" size={30} color="white" />
-                    </TouchableOpacity>
-                  )}
-                  onSwipeableRightOpen={() => handleRemoveCard(card.id)}
-                  friction={2}
-                >
-                  <TouchableOpacity
-                    onPress={() =>
-                      handleCardFocus(card.id, card.latitude, card.longitude)
-                    }
-                  >
-                    <View style={styles.cardWide}>
-                      <Image
-                        source={{ uri: card.image_url }}
-                        style={styles.cardImage}
-                        resizeMode="cover"
-                        onError={(e) =>
-                          console.error(
-                            "Error loading image: ",
-                            e.nativeEvent.error
-                          )
-                        }
-                      />
-                      <View style={styles.cardContentOverlay}>
-                        <Text style={{ fontSize: 10, color: "#fff" }}>
-                          ({distance} km)
-                        </Text>
-                        <Text style={styles.cardAddress}>{card.address}</Text>
-                        <Text style={styles.cardDetail}>
-                          Price per hour: €{card.price_per_hour || "N/A"}
-                        </Text>
-                        <Text style={styles.cardDetail}>
-                          Availability:{" "}
-                          {`${card.availability_start || ""} - ${
-                            card.availability_end || ""
-                          }`}
-                        </Text>
-                        <Text style={styles.cardDetail}>
-                          Width: {card.width || "N/A"} m
-                        </Text>
-                        <Text style={styles.cardDetail}>
-                          Length: {card.length || "N/A"} m
-                        </Text>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                </Swipeable>
-              );
+              return renderCard(card, distance);
             })}
           </ScrollView>
         ) : (
@@ -330,13 +381,19 @@ const ExploreScreen = () => {
       <BottomSheet
         hasDraggableIcon
         ref={bottomSheet}
-        height={700}
-        onOpen={() => {
-          setHighlightedCardId(null);
-        }}
+        height={600}
+        draggableIconStyle={styles.bottomSheetIcon}
       >
+        <View style={styles.bottomSheetHeader}>
+          <Text style={styles.bottomSheetTitle}>Available Parking Spots</Text>
+          <Text style={styles.bottomSheetSubtitle}>
+            {filteredParkingData.length} spots found
+          </Text>
+        </View>
+        
         <ScrollView
-          contentContainerStyle={{ padding: 10, alignItems: "center" }}
+          contentContainerStyle={styles.bottomSheetContent}
+          showsVerticalScrollIndicator={false}
         >
           {filteredParkingData.map((card) => {
             const distance = location
@@ -350,41 +407,33 @@ const ExploreScreen = () => {
             return (
               <TouchableOpacity
                 key={card.id}
-                onPress={() =>
-                  handleCardFocus(card.id, card.latitude, card.longitude)
-                }
+                style={styles.bottomSheetCard}
+                onPress={() => handleCardFocus(card.id, card.latitude, card.longitude)}
+                activeOpacity={0.7}
               >
-                <View style={[styles.cardWide, { marginBottom: 10 }]}>
-                  <Image
-                    source={{ uri: card.image_url }}
-                    style={styles.cardImage}
-                    resizeMode="cover"
-                    onError={(e) =>
-                      console.error(
-                        "Error loading image: ",
-                        e.nativeEvent.error
-                      )
-                    }
-                  />
-                  <View style={styles.cardContentOverlay}>
-                    <Text style={{ fontSize: 10, color: "#fff" }}>
-                      ({distance} km)
+                <Image
+                  source={{ uri: card.image_url }}
+                  style={styles.bottomSheetCardImage}
+                  resizeMode="cover"
+                />
+                <View style={styles.bottomSheetCardContent}>
+                  <View style={styles.bottomSheetCardHeader}>
+                    <Text style={styles.bottomSheetCardDistance}>
+                      {distance} km
                     </Text>
-                    <Text style={styles.cardAddress}>{card.address}</Text>
-                    <Text style={styles.cardDetail}>
-                      Price per hour: €{card.price_per_hour || "N/A"}
+                    <Text style={styles.bottomSheetCardPrice}>
+                      €{card.price_per_hour}/h
                     </Text>
-                    <Text style={styles.cardDetail}>
-                      Availability:{" "}
-                      {`${card.availability_start || ""} - ${
-                        card.availability_end || ""
-                      }`}
+                  </View>
+                  <Text style={styles.bottomSheetCardAddress} numberOfLines={1}>
+                    {card.address}
+                  </Text>
+                  <View style={styles.bottomSheetCardDetails}>
+                    <Text style={styles.bottomSheetCardDetail}>
+                      {card.width}m × {card.length}m
                     </Text>
-                    <Text style={styles.cardDetail}>
-                      Width: {card.width || "N/A"} m
-                    </Text>
-                    <Text style={styles.cardDetail}>
-                      Length: {card.length || "N/A"} m
+                    <Text style={styles.bottomSheetCardDetail}>
+                      {card.availability_start} - {card.availability_end}
                     </Text>
                   </View>
                 </View>
@@ -409,6 +458,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     zIndex: 10,
   },
+  searchContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 10,
+  },
   searchBar: {
     flex: 1,
     height: 40,
@@ -421,6 +476,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
     marginRight: 10,
+  },
+  clearButton: {
+    position: 'absolute',
+    right: 10,
+    padding: 5,
   },
   focusButton: {
     height: 40,
@@ -441,62 +501,158 @@ const styles = StyleSheet.create({
     alignItems: "center",
     zIndex: 10,
   },
-  cardWide: {
-    width: 350,
-    height: 250,
-    borderRadius: 20,
-    padding: 0,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 5,
-    marginBottom: 20,
-    overflow: "hidden",
+  cardContainer: {
+    marginBottom: 12,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#f0f0f0',
+  },
+  card: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    overflow: 'hidden',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   cardImage: {
-    width: "100%",
-    height: "100%",
-    position: "absolute",
-    top: 0,
-    left: 0,
+    width: '100%',
+    height: 120,
+    backgroundColor: '#f0f0f0',
   },
-  cardContentOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    borderRadius: 20,
-    padding: 15,
-    justifyContent: "flex-end",
+  cardContent: {
+    padding: 12,
   },
-  cardTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#fff",
-    marginBottom: 5,
+  distance: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
   },
-  cardAddress: {
+  address: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  price: {
     fontSize: 18,
-    fontWeight: "bold",
-    color: "#fff",
-    marginBottom: 5,
+    fontWeight: '700',
+    color: '#2196F3',
+    marginBottom: 8,
   },
-  cardDetail: {
+  detailsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  details: {
+    fontSize: 13,
+    color: '#666',
+  },
+  deleteAction: {
+    backgroundColor: '#ff4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 70,
+    height: '100%',
+  },
+  detailsAction: {
+    backgroundColor: '#2196F3',
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 70,
+    height: '100%',
+  },
+  actionContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionText: {
+    color: 'white',
+    fontSize: 11,
+    marginTop: 4,
+    fontWeight: '600',
+  },
+  scrollContent: {
+    paddingVertical: 15,
+    paddingHorizontal: 15,
+  },
+  bottomSheetIcon: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#D1D1D6',
+    borderRadius: 2,
+    marginTop: 8,
+  },
+  bottomSheetHeader: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F2F2F7',
+  },
+  bottomSheetTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: 4,
+  },
+  bottomSheetSubtitle: {
     fontSize: 14,
-    color: "#fff",
-    marginBottom: 3,
+    color: '#666',
   },
-  noButton: {
-    backgroundColor: "#ff6b6b",
-    padding: 15,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
+  bottomSheetContent: {
+    padding: 16,
   },
-  yesButton: {
-    backgroundColor: "#4caf50",
-    padding: 15,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
+  bottomSheetCard: {
+    flexDirection: 'row',
+    backgroundColor: 'white',
+    borderRadius: 12,
+    marginBottom: 12,
+    overflow: 'hidden',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    height: 100,
+  },
+  bottomSheetCardImage: {
+    width: 100,
+    height: '100%',
+    backgroundColor: '#f0f0f0',
+  },
+  bottomSheetCardContent: {
+    flex: 1,
+    padding: 12,
+    justifyContent: 'space-between',
+  },
+  bottomSheetCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  bottomSheetCardDistance: {
+    fontSize: 12,
+    color: '#666',
+  },
+  bottomSheetCardPrice: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2196F3',
+  },
+  bottomSheetCardAddress: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#000',
+    marginBottom: 4,
+  },
+  bottomSheetCardDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  bottomSheetCardDetail: {
+    fontSize: 12,
+    color: '#666',
   },
 });
