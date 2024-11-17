@@ -22,6 +22,7 @@ import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplet
 import { v4 as uuidv4 } from 'uuid';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useRouter } from "expo-router";
+import { format } from 'date-fns';
 
 const CreateSpace: React.FC = () => {
   const [name, setName] = useState<string>("");
@@ -74,8 +75,8 @@ const CreateSpace: React.FC = () => {
       const cleanNumber = (value: string) => {
         return value
           .trim()
-          .replace(/,/g, '.') // Replace all commas with periods
-          .replace(/[^\d.]/g, ''); // Remove any non-digit characters except period
+          .replace(/,/g, '.') 
+          .replace(/[^\d.]/g, ''); 
       };
 
       const cleanPrice = cleanNumber(price);
@@ -84,6 +85,11 @@ const CreateSpace: React.FC = () => {
 
       if (!cleanPrice || isNaN(parseFloat(cleanPrice))) {
         alert('Please enter a valid price per hour');
+        return;
+      }
+
+      if (!startTime || !endTime) {
+        alert('Please select both start and end times');
         return;
       }
 
@@ -138,26 +144,24 @@ const CreateSpace: React.FC = () => {
         }
       }
 
-      // Format the dates correctly for PostgreSQL
-      const formatTimeForDB = (dateString: string) => {
-        const date = new Date(dateString);
-        return date.toLocaleTimeString('en-US', { 
-          hour12: false,
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit'
-        });
-      };
+      // Create timestamps for start and end times
+      const startTimestamp = startTime.toISOString();
+      const endTimestamp = endTime.toISOString();
 
-      // Modify the newParkingSpace object to ensure price is explicitly converted
+      // Validate that end time is after start time
+      if (endTime <= startTime) {
+        alert('End time must be after start time');
+        return;
+      }
+
       const newParkingSpace: Partial<ParkingSpace> = {
         user_id: user.id,
         address,
         latitude,
         longitude,
         price_per_hour: parseFloat(cleanPrice),
-        availability_start: formatTimeForDB(availabilityStart),
-        availability_end: formatTimeForDB(availabilityEnd),
+        availability_start: startTimestamp,  // Use timestamp
+        availability_end: endTimestamp,      // Use timestamp
         is_available: true,
         description,
         length: cleanLength ? parseFloat(cleanLength) : undefined,
@@ -165,7 +169,6 @@ const CreateSpace: React.FC = () => {
         image_url: imageUrl,
       };
 
-      console.log('Final price value:', newParkingSpace.price_per_hour);
       console.log('Sending to database:', newParkingSpace);
 
       const { data, error } = await supabase
@@ -182,7 +185,7 @@ const CreateSpace: React.FC = () => {
       console.log("Parking space created:", data);
       alert('Parking space created successfully!');
       
-      // Clear all form fields
+      // Clear form fields
       setName("");
       setDescription("");
       setLength("");
@@ -192,8 +195,6 @@ const CreateSpace: React.FC = () => {
       setAddress("");
       setLatitude(0);
       setLongitude(0);
-      setAvailabilityStart("");
-      setAvailabilityEnd("");
       setStartTime(null);
       setEndTime(null);
 
@@ -207,55 +208,62 @@ const CreateSpace: React.FC = () => {
 
   const formatDateTime = (date: Date | null) => {
     if (!date) return '';
-    return `${date.toLocaleDateString('en-US', {
-      month: 'numeric',
-      day: 'numeric',
-      year: '2-digit'
-    })} ${date.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    })}`;
+    
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    // Helper to check if dates are the same day
+    const isSameDay = (d1: Date, d2: Date) => {
+      return d1.getDate() === d2.getDate() &&
+        d1.getMonth() === d2.getMonth() &&
+        d1.getFullYear() === d2.getFullYear();
+    };
+
+    // Helper to check if same year
+    const isSameYear = (d1: Date, d2: Date) => {
+      return d1.getFullYear() === d2.getFullYear();
+    };
+
+    let dateStr;
+    if (isSameDay(date, today)) {
+      dateStr = 'Today';
+    } else if (isSameDay(date, tomorrow)) {
+      dateStr = 'Tomorrow';
+    } else if (isSameYear(date, today)) {
+      dateStr = format(date, 'dd/MM');
+    } else {
+      dateStr = format(date, 'dd/MM/yy'); // Using 2-digit year for compactness
+    }
+
+    const timeStr = format(date, 'HH:mm');
+    return `${dateStr}, ${timeStr}`;
   };
 
   const handleStartChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-    if (event.type === "set" && selectedDate) {
-      if (pickerMode === 'date') {
-        // Only update the date portion, keep the existing time if any
-        const newDate = new Date(selectedDate);
-        if (startTime) {
-          newDate.setHours(startTime.getHours(), startTime.getMinutes());
-        }
-        setStartTime(newDate);
-        setAvailabilityStart(newDate.toISOString());
-      } else {
-        // Update just the time portion while keeping the existing date
-        const newDate = new Date(startTime || selectedDate);
-        newDate.setHours(selectedDate.getHours(), selectedDate.getMinutes());
-        setStartTime(newDate);
-        setAvailabilityStart(newDate.toISOString());
-      }
+    if (selectedDate) {
+      setStartTime(selectedDate);
     }
   };
 
   const handleEndChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-    if (event.type === "set" && selectedDate) {
-      if (pickerMode === 'date') {
-        // Only update the date portion, keep the existing time if any
-        const newDate = new Date(selectedDate);
-        if (endTime) {
-          newDate.setHours(endTime.getHours(), endTime.getMinutes());
-        }
-        setEndTime(newDate);
-        setAvailabilityEnd(newDate.toISOString());
-      } else {
-        // Update just the time portion while keeping the existing date
-        const newDate = new Date(endTime || selectedDate);
-        newDate.setHours(selectedDate.getHours(), selectedDate.getMinutes());
-        setEndTime(newDate);
-        setAvailabilityEnd(newDate.toISOString());
+    if (selectedDate) {
+      if (startTime && selectedDate <= startTime) {
+        alert('End time must be after start time');
+        return;
       }
+      setEndTime(selectedDate);
     }
+  };
+
+  const handlePickerNext = () => {
+    setPickerMode('time');
+  };
+
+  const handlePickerDone = () => {
+    setShowStartPicker(false);
+    setShowEndPicker(false);
+    setPickerMode('date');
   };
 
   // Create an array of render items
@@ -346,9 +354,12 @@ const CreateSpace: React.FC = () => {
               }}
             >
               <MaterialIcons name="event" size={20} color="gray" style={styles.icon} />
-              <Text style={styles.timeText}>
-                {startTime ? formatDateTime(startTime) : 'Start Date & Time'}
-              </Text>
+              <View style={styles.timeTextContainer}>
+                <Text style={styles.timeLabel}>From</Text>
+                <Text style={styles.timeText}>
+                  {startTime ? formatDateTime(startTime) : 'Select start'}
+                </Text>
+              </View>
             </TouchableOpacity>
           </View>
 
@@ -361,9 +372,12 @@ const CreateSpace: React.FC = () => {
               }}
             >
               <MaterialIcons name="event" size={20} color="gray" style={styles.icon} />
-              <Text style={styles.timeText}>
-                {endTime ? formatDateTime(endTime) : 'End Date & Time'}
-              </Text>
+              <View style={styles.timeTextContainer}>
+                <Text style={styles.timeLabel}>To</Text>
+                <Text style={styles.timeText}>
+                  {endTime ? formatDateTime(endTime) : 'Select end'}
+                </Text>
+              </View>
             </TouchableOpacity>
           </View>
         </View>
@@ -384,6 +398,7 @@ const CreateSpace: React.FC = () => {
                     onPress={() => {
                       setShowStartPicker(false);
                       setShowEndPicker(false);
+                      setPickerMode('date');
                     }}
                     style={styles.closeButton}
                   >
@@ -403,18 +418,14 @@ const CreateSpace: React.FC = () => {
                   {pickerMode === 'date' ? (
                     <TouchableOpacity
                       style={styles.nextButton}
-                      onPress={() => setPickerMode('time')}
+                      onPress={handlePickerNext}
                     >
                       <Text style={styles.nextButtonText}>Next</Text>
                     </TouchableOpacity>
                   ) : (
                     <TouchableOpacity
                       style={styles.doneButton}
-                      onPress={() => {
-                        setShowStartPicker(false);
-                        setShowEndPicker(false);
-                        setPickerMode('date');
-                      }}
+                      onPress={handlePickerDone}
                     >
                       <Text style={styles.doneButtonText}>Done</Text>
                     </TouchableOpacity>
@@ -618,7 +629,7 @@ const styles = StyleSheet.create({
     shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowRadius: 10,
-    height: 45,
+    height: 60,
     paddingHorizontal: 10,
     zIndex: 1,
   },
@@ -685,11 +696,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '600',
+    color: '#333',
   },
   closeButton: {
     padding: 5,
@@ -706,39 +721,58 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 8,
   },
+  timeTextContainer: {
+    flex: 1,
+  },
+  timeLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 2,
+  },
   timeText: {
     fontSize: 14,
-    color: '#666',
-    flex: 1,
+    color: '#333',
+    fontWeight: '500',
   },
   picker: {
     height: 200,
-    marginBottom: 20,
   },
   pickerButtons: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingVertical: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  nextButton: {
+    backgroundColor: '#ff9d00',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   doneButton: {
     backgroundColor: '#ff9d00',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
     borderRadius: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  doneButtonText: {
+  nextButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
   },
-  nextButton: {
-    backgroundColor: '#ff9d00',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  nextButtonText: {
+  doneButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
