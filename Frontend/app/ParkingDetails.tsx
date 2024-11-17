@@ -264,6 +264,17 @@ if (isNaN(availabilityStart.getTime()) || isNaN(availabilityEnd.getTime())) {
 
   return (
     <>
+      <Stack.Screen 
+        options={{
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => router.back()}>
+              <Ionicons name="arrow-back" size={24} color="#007AFF" />
+            </TouchableOpacity>
+          ),
+          headerTitle: "Details"
+        }} 
+      />
+      
       <ScrollView style={styles.container}>
         {/* Header Image or Placeholder */}
         <View style={styles.imageContainer}>
