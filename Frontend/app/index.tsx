@@ -4,97 +4,96 @@ import {
   Text,
   TouchableOpacity,
   View,
-  
 } from "react-native";
-import React from "react";
-import { Link, Stack } from "expo-router";
+import React, { useEffect } from "react";
+import { Link, useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { Colors } from "@/constants/Colors";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, { FadeInDown, FadeInRight } from 'react-native-reanimated'
-import { useEffect } from "react";
-import { useRouter } from "expo-router";
+import Animated, { FadeInDown, FadeInRight } from "react-native-reanimated";
 
-type Props = {};
-
-const WelcomeScreen = (props: Props) => {
+const Welcome = () => {
   const router = useRouter();
 
   useEffect(() => {
     const isAuthenticated = false;
-    
+
     if (isAuthenticated) {
-      router.replace("/(tabs)");
+      router.replace("/(tabs)/Home");
     }
   }, []);
 
   return (
-    <>
-      <Stack.Screen options={{ headerShown: false }} />
-      <ImageBackground
-        source={require("@/assets/images/page-parking-lot.png")}
-        style={{ flex: 1 }}
-        resizeMode="cover"
-      >
-        <View style={styles.container}>
-          <LinearGradient
-            colors={[
-              "transparent",
-              "rgba(255,255,255,0.9)",
-              "rgba(255,255,255,1)",
-            ]}
-            style={styles.background}
-          >
-            <View style={styles.wrapper}>
-              <Animated.Text style={styles.title} entering={FadeInRight.delay(500).duration(300)}>Parku</Animated.Text>
-              <Animated.Text style={styles.description} entering={FadeInRight.delay(300).duration(300)}>Park anywhere with Parku!</Animated.Text>
-              <View style={styles.socialLoginWrappers}>
-                <Animated.View entering={FadeInDown.delay(500).duration(300)}>
-                <Link href={"/signUp"} asChild>
+    <ImageBackground
+      source={require("@/assets/images/page-parking-lot.png")}
+      style={{ flex: 1 }}
+      resizeMode="cover"
+    >
+      <View style={styles.container}>
+        <LinearGradient
+          colors={[
+            "transparent",
+            "rgba(255,255,255,0.9)",
+            "rgba(255,255,255,1)",
+          ]}
+          style={styles.background}
+        >
+          <View style={styles.wrapper}>
+            <Animated.Text
+              style={styles.title}
+              entering={FadeInRight.delay(500).duration(300)}
+            >
+              Parku
+            </Animated.Text>
+            <Animated.Text
+              style={styles.description}
+              entering={FadeInRight.delay(300).duration(300)}
+            >
+              Park anywhere with Parku!
+            </Animated.Text>
+            <View style={styles.socialLoginWrappers}>
+              <Animated.View entering={FadeInDown.delay(500).duration(300)}>
+                <Link href={"/SignUp"} asChild>
                   <TouchableOpacity style={styles.btn}>
                     <Ionicons name="mail-outline" size={20} color="black" />
                     <Text style={styles.btnText}>Continue with Email</Text>
                   </TouchableOpacity>
                 </Link>
-                </Animated.View>
-              </View>
-              <View style={styles.socialLoginWrappers}>
-                <Animated.View entering={FadeInDown.delay(700).duration(300)}>
-                <Link href={"/signUp"} asChild>
+              </Animated.View>
+            </View>
+            <View style={styles.socialLoginWrappers}>
+              <Animated.View entering={FadeInDown.delay(700).duration(300)}>
+                <Link href={"/SignUp"} asChild>
                   <TouchableOpacity style={styles.btn}>
                     <Ionicons name="logo-google" size={20} color="black" />
                     <Text style={styles.btnText}>Continue with Google</Text>
                   </TouchableOpacity>
                 </Link>
-                </Animated.View>
-              </View>
-              <View style={styles.socialLoginWrappers}>
-                <Animated.View entering={FadeInDown.delay(1100).duration(300)}>   
+              </Animated.View>
+            </View>
+            <View style={styles.socialLoginWrappers}>
+              <Animated.View entering={FadeInDown.delay(1100).duration(300)}>
                 <Link href={"/signUp"} asChild>
                   <TouchableOpacity style={styles.btn}>
                     <Ionicons name="logo-apple" size={20} color="black" />
                     <Text style={styles.btnText}>Continue with Apple</Text>
                   </TouchableOpacity>
                 </Link>
-                </Animated.View>
-              </View>
-              <Text style={styles.loginText}>
-                Already have an account? {""}
-                <Link href={"/signIn"} asChild>
-                  <TouchableOpacity>
-                    <Text style={styles.loginTextSpan}> Sign In</Text>
-                  </TouchableOpacity>
-                </Link>
-              </Text>
+              </Animated.View>
             </View>
-          </LinearGradient>
-        </View>
-      </ImageBackground>
-    </>
+            <View style={styles.loginText}>
+              <Text>Already have an account? {""}</Text>
+              <TouchableOpacity onPress={() => router.push("/Login")}>
+                <Text style={styles.loginTextSpan}>Login</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </LinearGradient>
+      </View>
+    </ImageBackground>
   );
 };
 
-export default WelcomeScreen;
+export default Welcome;
 
 const styles = StyleSheet.create({
   container: {
@@ -118,8 +117,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 22,
-    color: "#ff9d00",
-    fontWeight: '700',
+    color: "#82DFF1",
+    fontWeight: "700",
     letterSpacing: 1.2,
     marginBottom: 5,
   },
@@ -144,7 +143,7 @@ const styles = StyleSheet.create({
     gap: 5,
     marginBottom: 15,
   },
-  btnText: { fontSize: 14, fontWeight: '600', color: "black" },
-  loginText: {marginTop: 30, fontSize: 14, color: "black",lineHeight: 24,},
-  loginTextSpan: {color:'#ff9d00',fontWeight:'600'},
+  btnText: { fontSize: 14, fontWeight: "600", color: "black" },
+  loginText: { marginTop: 30, flexDirection: "row" },
+  loginTextSpan: { color: "#82DFF1", fontWeight: "600"},
 });

@@ -17,7 +17,7 @@ import CardMap from "@/components/CardMap";
 import Icon from "react-native-vector-icons/FontAwesome";
 import { Swipeable } from "react-native-gesture-handler";
 import BottomSheet from "react-native-gesture-bottom-sheet";
-import GestureRecognizer from 'react-native-swipe-gestures';
+import GestureRecognizer from "react-native-swipe-gestures";
 
 const INITIAL_REGION = {
   latitude: 47.41375,
@@ -75,7 +75,9 @@ const ExploreScreen = () => {
       try {
         const { data, error } = await supabase
           .from("parking_spaces")
-          .select("id, address, latitude, longitude, price_per_hour, availability_start, availability_end, is_available, description, width, length, image_url");
+          .select(
+            "id, address, latitude, longitude, price_per_hour, availability_start, availability_end, is_available, description, width, length, image_url"
+          );
 
         if (error) {
           console.error("Error fetching parking spots:", error);
@@ -93,7 +95,9 @@ const ExploreScreen = () => {
   }, []);
 
   const handleRemoveCard = (cardId) => {
-    const updatedData = filteredParkingData.filter((item) => item.id !== cardId);
+    const updatedData = filteredParkingData.filter(
+      (item) => item.id !== cardId
+    );
     setFilteredParkingData(updatedData);
     if (highlightedCardId === cardId) {
       setHighlightedCardId(null);
@@ -203,7 +207,13 @@ const ExploreScreen = () => {
               description={parking.description}
               pinColor={highlightedCardId === parking.id ? "yellow" : "red"}
               tracksViewChanges={highlightedCardId === parking.id}
-              onPress={() => handleMarkerPress(parking.id, parking.latitude, parking.longitude)}
+              onPress={() =>
+                handleMarkerPress(
+                  parking.id,
+                  parking.latitude,
+                  parking.longitude
+                )
+              }
               ref={(ref) => {
                 if (ref) {
                   markerRefs[parking.id] = ref;
@@ -228,7 +238,10 @@ const ExploreScreen = () => {
 
       <View style={styles.cardListContainer}>
         {filteredParkingData.length > 0 ? (
-          <ScrollView ref={scrollViewRef} contentContainerStyle={{ alignItems: 'center' }}>
+          <ScrollView
+            ref={scrollViewRef}
+            contentContainerStyle={{ alignItems: "center" }}
+          >
             {filteredParkingData.map((card) => {
               const distance = location
                 ? calculateDistance(
@@ -252,7 +265,9 @@ const ExploreScreen = () => {
                   renderLeftActions={() => (
                     <TouchableOpacity
                       style={styles.yesButton}
-                      onPress={() => handleCardFocus(card.id, card.latitude, card.longitude)}
+                      onPress={() =>
+                        handleCardFocus(card.id, card.latitude, card.longitude)
+                      }
                     >
                       <Icon name="check-circle" size={30} color="white" />
                     </TouchableOpacity>
@@ -260,27 +275,43 @@ const ExploreScreen = () => {
                   onSwipeableRightOpen={() => handleRemoveCard(card.id)}
                   friction={2}
                 >
-                  <TouchableOpacity onPress={() => handleCardFocus(card.id, card.latitude, card.longitude)}>
+                  <TouchableOpacity
+                    onPress={() =>
+                      handleCardFocus(card.id, card.latitude, card.longitude)
+                    }
+                  >
                     <View style={styles.cardWide}>
                       <Image
                         source={{ uri: card.image_url }}
                         style={styles.cardImage}
                         resizeMode="cover"
-                        onError={(e) => console.error("Error loading image: ", e.nativeEvent.error)}
+                        onError={(e) =>
+                          console.error(
+                            "Error loading image: ",
+                            e.nativeEvent.error
+                          )
+                        }
                       />
                       <View style={styles.cardContentOverlay}>
-                        <Text style={{ fontSize: 10, color: "#fff" }}>({distance} km)</Text>
+                        <Text style={{ fontSize: 10, color: "#fff" }}>
+                          ({distance} km)
+                        </Text>
                         <Text style={styles.cardAddress}>{card.address}</Text>
                         <Text style={styles.cardDetail}>
                           Price per hour: €{card.price_per_hour || "N/A"}
                         </Text>
                         <Text style={styles.cardDetail}>
-                          Availability: {`${card.availability_start || ""} - ${
+                          Availability:{" "}
+                          {`${card.availability_start || ""} - ${
                             card.availability_end || ""
                           }`}
                         </Text>
-                        <Text style={styles.cardDetail}>Width: {card.width || "N/A"} m</Text>
-                        <Text style={styles.cardDetail}>Length: {card.length || "N/A"} m</Text>
+                        <Text style={styles.cardDetail}>
+                          Width: {card.width || "N/A"} m
+                        </Text>
+                        <Text style={styles.cardDetail}>
+                          Length: {card.length || "N/A"} m
+                        </Text>
                       </View>
                     </View>
                   </TouchableOpacity>
@@ -304,7 +335,9 @@ const ExploreScreen = () => {
           setHighlightedCardId(null);
         }}
       >
-        <ScrollView contentContainerStyle={{ padding: 10, alignItems: 'center' }}>
+        <ScrollView
+          contentContainerStyle={{ padding: 10, alignItems: "center" }}
+        >
           {filteredParkingData.map((card) => {
             const distance = location
               ? calculateDistance(
@@ -315,27 +348,44 @@ const ExploreScreen = () => {
                 ).toFixed(2)
               : "N/A";
             return (
-              <TouchableOpacity key={card.id} onPress={() => handleCardFocus(card.id, card.latitude, card.longitude)}>
+              <TouchableOpacity
+                key={card.id}
+                onPress={() =>
+                  handleCardFocus(card.id, card.latitude, card.longitude)
+                }
+              >
                 <View style={[styles.cardWide, { marginBottom: 10 }]}>
                   <Image
                     source={{ uri: card.image_url }}
                     style={styles.cardImage}
                     resizeMode="cover"
-                    onError={(e) => console.error("Error loading image: ", e.nativeEvent.error)}
+                    onError={(e) =>
+                      console.error(
+                        "Error loading image: ",
+                        e.nativeEvent.error
+                      )
+                    }
                   />
                   <View style={styles.cardContentOverlay}>
-                    <Text style={{ fontSize: 10, color: "#fff" }}>({distance} km)</Text>
+                    <Text style={{ fontSize: 10, color: "#fff" }}>
+                      ({distance} km)
+                    </Text>
                     <Text style={styles.cardAddress}>{card.address}</Text>
                     <Text style={styles.cardDetail}>
                       Price per hour: €{card.price_per_hour || "N/A"}
                     </Text>
                     <Text style={styles.cardDetail}>
-                      Availability: {`${card.availability_start || ""} - ${
+                      Availability:{" "}
+                      {`${card.availability_start || ""} - ${
                         card.availability_end || ""
                       }`}
                     </Text>
-                    <Text style={styles.cardDetail}>Width: {card.width || "N/A"} m</Text>
-                    <Text style={styles.cardDetail}>Length: {card.length || "N/A"} m</Text>
+                    <Text style={styles.cardDetail}>
+                      Width: {card.width || "N/A"} m
+                    </Text>
+                    <Text style={styles.cardDetail}>
+                      Length: {card.length || "N/A"} m
+                    </Text>
                   </View>
                 </View>
               </TouchableOpacity>

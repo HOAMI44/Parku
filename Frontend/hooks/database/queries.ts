@@ -50,3 +50,25 @@ export const useGetUserById = (userId: string) => {
 
   return useSupabase<User>(queryFn);
 };
+
+export const useGetAverageReviewScoreByUserId = (userId: string) => {
+  console.log("Fetching average review score for user with id: ", userId);
+
+  const queryFn = useCallback(async () => {
+    return await supabase
+      .from("reviews")
+      .select(`
+        rating,
+        parking_spaces!inner(user_id)
+      `)
+      .eq("parking_spaces.user_id", userId)
+      .then(({ data, error, status, statusText }) => {
+        if (!data || data.length === 0) return { data: 0, error, status, statusText };
+        const scores = data.map(review => review.rating);
+        const average = scores.reduce((a, b) => a + b, 0) / scores.length;
+        return { data: average, error, status, statusText };
+      });
+  }, [userId]);
+
+  return useSupabase<number>(queryFn);
+};

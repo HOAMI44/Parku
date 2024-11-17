@@ -1,14 +1,12 @@
 import {
   Adapt,
   Button,
-  Input,
   Label,
   Popover,
   PopoverProps,
   XStack,
   YStack,
 } from "tamagui";
-import { TamaSlider } from "./TamaSlider";
 import Slider from "@react-native-community/slider";
 import { Text } from "react-native";
 
@@ -19,7 +17,13 @@ export function TamaPopover({
   distance,
   handleDistance,
   ...props
-}: PopoverProps & { Icon?: any; Name?: string; shouldAdapt?: boolean, distance?: number, handleDistance: any }) {
+}: PopoverProps & {
+  Icon?: any;
+  Name?: string;
+  shouldAdapt?: boolean;
+  distance?: number;
+  handleDistance: any;
+}) {
   return (
     <Popover size="$5" allowFlip {...props}>
       <Popover.Trigger asChild>
@@ -64,17 +68,14 @@ export function TamaPopover({
               Filter Options
             </Label>
           </XStack>
-<Text>
-        Distance: {distance.toString()} m
-</Text>
-          <Slider value={distance} 
-          maximumValue={5000}
-          minimumValue={10}
+          <Text>Distance: {distance.toString()} m</Text>
+          <Slider
+            value={distance}
+            maximumValue={5000}
+            minimumValue={10}
             step={10}
-            onValueChange={(value)=>handleDistance(value)}
+            onValueChange={(value) => handleDistance(value)}
           />
-            
-        
 
           <Popover.Close asChild>
             <Button

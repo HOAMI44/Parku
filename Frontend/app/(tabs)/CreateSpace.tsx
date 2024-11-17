@@ -15,11 +15,10 @@ import * as ImagePicker from "expo-image-picker";
 import { Stack } from "expo-router";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { ScrollView, FlatList } from "react-native-gesture-handler";
+import { FlatList } from "react-native-gesture-handler";
 import { supabase } from "../../lib/supabase";
 import type { ParkingSpace } from "../../types/types";
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
-import { GOOGLE_MAPS_API_KEY } from '@env';
 import { v4 as uuidv4 } from 'uuid';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useRouter } from "expo-router";
@@ -43,6 +42,7 @@ const CreateSpace: React.FC = () => {
   const [endTime, setEndTime] = useState<Date | null>(null);
   const [pickerMode, setPickerMode] = useState<'date' | 'time'>('date');
   const router = useRouter();
+  const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
 
   useEffect(() => {
     console.log("key: " + GOOGLE_MAPS_API_KEY);
@@ -197,7 +197,7 @@ const CreateSpace: React.FC = () => {
       setStartTime(null);
       setEndTime(null);
 
-      router.push('/profile');
+      router.push('/Profile');
       
     } catch (error) {
       console.error("Error creating spot:", error);
@@ -538,7 +538,6 @@ const CreateSpace: React.FC = () => {
 
   return (
     <View style={{ flex: 1 }}>
-      <Stack.Screen options={{ headerTitle: "Create Spot" }} />
       <KeyboardAvoidingView 
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}

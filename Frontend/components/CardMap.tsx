@@ -33,7 +33,7 @@ export default function CardMap({
   const [saved, setSaved] = useState([]);
 
   return (
-    <SafeAreaView style={{ flex: 1, }}>
+    <SafeAreaView style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={styles.content}>
         <TouchableOpacity
           key={id}
@@ -63,9 +63,7 @@ export default function CardMap({
 
                 <Text style={styles.cardStars}>{rating}</Text>
 
-                <Text style={{ color: "#595a63" }}>
-                  ({rating} reviews)
-                </Text>
+                <Text style={{ color: "#595a63" }}>({rating} reviews)</Text>
               </View>
 
               <Text style={styles.cardDates}>{time}</Text>
@@ -75,10 +73,13 @@ export default function CardMap({
               </Text>
             </View>
             <View>
-            <TouchableOpacity><Text>Yes</Text></TouchableOpacity>
-            <TouchableOpacity><Text>No</Text></TouchableOpacity>
+              <TouchableOpacity>
+                <Text>Yes</Text>
+              </TouchableOpacity>
+              <TouchableOpacity>
+                <Text>No</Text>
+              </TouchableOpacity>
             </View>
-            
           </View>
         </TouchableOpacity>
       </ScrollView>

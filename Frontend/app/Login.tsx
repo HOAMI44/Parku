@@ -1,63 +1,68 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Link, router } from "expo-router";
 import { supabase } from "../lib/supabase";
+import { useAuth } from "../contexts/AuthContext";
 
-const SignUp = () => {
+const Login = () => {
+  const { session } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSignUp = async () => {
-    if (password !== confirmPassword) {
-      setError("Passwords don't match");
+  // Redirect if already logged in
+  useEffect(() => {
+    if (session) {
+      router.replace("/(tabs)/Home");
+    }
+  }, [session]);
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert("Error", "Please fill in all fields");
       return;
     }
 
+    setIsLoading(true);
     try {
-      setLoading(true);
-      setError(null);
-
-      const { data, error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        Alert.alert("Error", error.message);
+        return;
+      }
 
-      // Just redirect to verify page with email
-      router.replace({
-        pathname: "/Verify",
-        params: {
-          email,
-          password,
-        },
-      });
+      if (data.user) {
+        router.dismissAll();
+        router.push("/(tabs)/Home");
+      }
     } catch (error) {
-      setError((error as Error).message);
+      Alert.alert("Error", "Something went wrong. Please try again.");
+      console.error(error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Sign Up</Text>
-        <Text style={styles.subtitle}>Create a new account</Text>
+        <Text style={styles.title}>Login</Text>
+        <Text style={styles.subtitle}>Please sign in to continue.</Text>
       </View>
 
-      {/* Email Input */}
       <View style={styles.inputContainer}>
         <Ionicons
           name="mail-outline"
@@ -71,10 +76,10 @@ const SignUp = () => {
           keyboardType="email-address"
           value={email}
           onChangeText={setEmail}
+          autoCapitalize="none"
         />
       </View>
 
-      {/* Password Input */}
       <View style={styles.inputContainer}>
         <Ionicons
           name="lock-closed-outline"
@@ -89,52 +94,35 @@ const SignUp = () => {
           value={password}
           onChangeText={setPassword}
         />
+        <TouchableOpacity>
+          <Text style={styles.forgotText}>Forgot</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Confirm Password Input */}
-      <View style={styles.inputContainer}>
-        <Ionicons
-          name="lock-closed-outline"
-          size={20}
-          color="gray"
-          style={styles.icon}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Confirm Password"
-          secureTextEntry
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-        />
-      </View>
-
-      {error && <Text style={styles.errorText}>{error}</Text>}
-
-      {/* Sign Up Button */}
       <TouchableOpacity
-        style={styles.signUpButton}
-        onPress={handleSignUp}
-        disabled={loading}
+        style={styles.loginButton}
+        onPress={handleLogin}
+        disabled={isLoading}
       >
         <LinearGradient colors={["#51daf5", "#82dff1"]} style={styles.gradient}>
-          <Text style={styles.signUpText}>
-            {loading ? "Creating account..." : "Sign Up"}
+          <Text style={styles.loginText}>
+            {isLoading ? "Logging in..." : "Login"}
           </Text>
           <Ionicons name="arrow-forward-outline" size={20} color="white" />
         </LinearGradient>
       </TouchableOpacity>
 
-      <View style={styles.loginText}>
-        <Text>Already have an account? {""}</Text>
-        <TouchableOpacity onPress={() => router.push("/Login")}>
-          <Text style={styles.loginTextSpan}>Login</Text>
+      <View style={styles.signUpText}>
+        <Text>Don't have an account? {""}</Text>
+        <TouchableOpacity onPress={() => router.push("/SignUp")}>
+          <Text style={styles.signUpTextSpan}>Sign up</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 };
 
-export default SignUp;
+export default Login;
 
 const styles = StyleSheet.create({
   container: {
@@ -176,7 +164,11 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
   },
-  signUpButton: {
+  forgotText: {
+    color: "#82DFF1",
+    fontWeight: "600",
+  },
+  loginButton: {
     marginTop: 20,
   },
   gradient: {
@@ -186,21 +178,12 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     borderRadius: 25,
   },
-  signUpText: {
+  loginText: {
     color: "white",
     fontSize: 16,
     fontWeight: "600",
     marginRight: 5,
   },
-  loginText: { marginTop: 30, flexDirection: "row", justifyContent: "center" },
-  loginTextSpan: { color: "#82DFF1", fontWeight: "600" },
-  loginLink: {
-    color: "#ff9d00",
-    fontWeight: "600",
-  },
-  errorText: {
-    color: "red",
-    textAlign: "center",
-    marginBottom: 10,
-  },
+  signUpText: { marginTop: 30, flexDirection: "row", justifyContent: "center"},
+  signUpTextSpan: { color: "#82DFF1", fontWeight: "600" },
 });

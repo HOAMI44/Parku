@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -10,41 +10,37 @@ import {
   Alert,
   Dimensions,
 } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { ParkingSpace } from "../types/types";
 import { formatCurrency, formatDate, formatTime } from "../utils/formatters";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 
-const ParkingDetailsScreen = (): JSX.Element => {
+const ParkingDetails = (): JSX.Element => {
   const router = useRouter();
   const { session } = useAuth();
-  const params = useLocalSearchParams<{ parking: string }>();
-  const parking: ParkingSpace = JSON.parse(params.parking);
-  
+  const params = useLocalSearchParams<{parkingSpace: string}>();
+  const parkingSpace: ParkingSpace = JSON.parse(params.parkingSpace);
+
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [startTime, setStartTime] = useState(new Date());
   const [endTime, setEndTime] = useState(new Date());
   const [loading, setLoading] = useState(false);
 
-  const availabilityStart = new Date(parking.availability_start);
-  const availabilityEnd = new Date(parking.availability_end);
+  const availabilityStart = new Date(parkingSpace.availability_start);
+  const availabilityEnd = new Date(parkingSpace.availability_end);
 
   const handleBookButtonPress = () => {
     if (!session) {
-      Alert.alert(
-        "Login Required",
-        "Please login to book a parking space",
-        [
-          { text: "Cancel", style: "cancel" },
-          { 
-            text: "Login", 
-            onPress: () => router.push("/signIn")
-          }
-        ]
-      );
+      Alert.alert("Login Required", "Please login to book a parking space", [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Login",
+          onPress: () => router.push("/Login"),
+        },
+      ]);
       return;
     }
     setIsModalVisible(true);
@@ -68,14 +64,14 @@ const ParkingDetailsScreen = (): JSX.Element => {
     }
 
     const { data: existingBookings, error } = await supabase
-      .from('bookings')
-      .select('*')
-      .eq('space_id', parking.id)
-      .gte('end_time', startTime.toISOString())
-      .lte('start_time', endTime.toISOString());
+      .from("bookings")
+      .select("*")
+      .eq("space_id", parkingSpace.id)
+      .gte("end_time", startTime.toISOString())
+      .lte("start_time", endTime.toISOString());
 
     if (error) {
-      console.error('Error checking bookings:', error);
+      console.error("Error checking bookings:", error);
       return false;
     }
 
@@ -97,7 +93,7 @@ const ParkingDetailsScreen = (): JSX.Element => {
     }
 
     setLoading(true);
-    
+
     try {
       const isValid = await validateTimeSelection();
       if (!isValid) {
@@ -105,20 +101,21 @@ const ParkingDetailsScreen = (): JSX.Element => {
         return;
       }
 
-      const hours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
-      const totalPrice = hours * parking.price_per_hour;
+      const hours =
+        (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+      const totalPrice = hours * parkingSpace.price_per_hour;
 
       const { data, error } = await supabase
-        .from('bookings')
+        .from("bookings")
         .insert([
           {
             user_id: session?.user?.id,
-            space_id: parking.id,
+            space_id: parkingSpace.id,
             start_time: startTime.toISOString(),
             end_time: endTime.toISOString(),
             total_price: totalPrice,
-            status: 'confirmed'
-          }
+            status: "confirmed",
+          },
         ])
         .select()
         .single();
@@ -127,27 +124,30 @@ const ParkingDetailsScreen = (): JSX.Element => {
 
       Alert.alert(
         "Booking Successful! 🎉",
-        `Your parking space has been booked for ${formatDate(startTime.toISOString())} from ${formatTime(startTime.toISOString())} to ${formatTime(endTime.toISOString())}`,
+        `Your parking space has been booked for ${formatDate(
+          startTime.toISOString()
+        )} from ${formatTime(startTime.toISOString())} to ${formatTime(
+          endTime.toISOString()
+        )}`,
         [
           {
             text: "View My Bookings",
             onPress: () => {
               setIsModalVisible(false);
-              router.push("/bookingHistory");
-            }
+              router.push("/BookingHistory");
+            },
           },
           {
             text: "Continue Browsing",
             onPress: () => {
               setIsModalVisible(false);
-              router.push("/explore");
-            }
-          }
+              router.push("/Explore");
+            },
+          },
         ]
       );
-
     } catch (error) {
-      console.error('Error creating booking:', error);
+      console.error("Error creating booking:", error);
       Alert.alert("Error", "Failed to create booking. Please try again.");
     } finally {
       setLoading(false);
@@ -159,9 +159,9 @@ const ParkingDetailsScreen = (): JSX.Element => {
       <ScrollView style={styles.container}>
         {/* Header Image or Placeholder */}
         <View style={styles.imageContainer}>
-          {parking.image_url ? (
+          {parkingSpace.image_url ? (
             <Image
-              source={{ uri: parking.image_url }}
+              source={{ uri: parkingSpace.image_url }}
               style={styles.image}
               resizeMode="cover"
             />
@@ -172,21 +172,12 @@ const ParkingDetailsScreen = (): JSX.Element => {
           )}
         </View>
 
-        {/* Back Button */}
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back-circle" size={40} color="#ffffff" />
-        </TouchableOpacity>
-
         {/* Content */}
         <View style={styles.contentContainer}>
-          <Text style={styles.title}>{parking.address}</Text>
-          
+          <Text style={styles.title}>{parkingSpace.address}</Text>
           <View style={styles.priceTag}>
             <Text style={styles.price}>
-              €{parking.price_per_hour}
+              €{parkingSpace.price_per_hour}
               <Text style={styles.priceUnit}>/hour</Text>
             </Text>
           </View>
@@ -195,28 +186,28 @@ const ParkingDetailsScreen = (): JSX.Element => {
             <View style={styles.infoRow}>
               <Ionicons name="calendar" size={24} color="#666" />
               <Text style={styles.infoText}>
-                Available: {formatDate(parking.availability_start)} - {formatDate(parking.availability_end)}
+                Available: {formatDate(parkingSpace.availability_start)} -{" "}
+                {formatDate(parkingSpace.availability_end)}
               </Text>
             </View>
 
             <View style={styles.infoRow}>
               <Ionicons name="resize" size={24} color="#666" />
               <Text style={styles.infoText}>
-                Size: {parking.length}m x {parking.width}m
+                Size: {parkingSpace.length}m x {parkingSpace.width}m
               </Text>
             </View>
           </View>
 
           <View style={styles.descriptionContainer}>
             <Text style={styles.sectionTitle}>Description</Text>
-            <Text style={styles.description}>{parking.description || "No description available"}</Text>
+            <Text style={styles.description}>
+              {parkingSpace.description || "No description available"}
+            </Text>
           </View>
 
           <TouchableOpacity
-            style={[
-              styles.bookButton,
-              !session && styles.bookButtonDisabled
-            ]}
+            style={[styles.bookButton, !session && styles.bookButtonDisabled]}
             onPress={handleBookButtonPress}
           >
             <Text style={styles.bookButtonText}>
@@ -236,7 +227,7 @@ const ParkingDetailsScreen = (): JSX.Element => {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Book Parking Space</Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.closeButton}
                 onPress={() => setIsModalVisible(false)}
               >
@@ -246,10 +237,10 @@ const ParkingDetailsScreen = (): JSX.Element => {
 
             <View style={styles.priceInfo}>
               <Text style={styles.priceInfoText}>
-                Rate: {formatCurrency(parking.price_per_hour)}/hour
+                Rate: {formatCurrency(parkingSpace.price_per_hour)}/hour
               </Text>
             </View>
-            
+
             <View style={styles.timePickerContainer}>
               <Text style={styles.timeLabel}>Start Time:</Text>
               <DateTimePicker
@@ -286,9 +277,9 @@ const ParkingDetailsScreen = (): JSX.Element => {
 
               <TouchableOpacity
                 style={[
-                  styles.modalButton, 
+                  styles.modalButton,
                   styles.confirmButton,
-                  loading && styles.buttonDisabled
+                  loading && styles.buttonDisabled,
                 ]}
                 onPress={handleBooking}
                 disabled={loading}
@@ -456,25 +447,25 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 20,
   },
   closeButton: {
     padding: 5,
   },
   priceInfo: {
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
     padding: 10,
     borderRadius: 8,
     marginBottom: 20,
   },
   priceInfoText: {
     fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+    color: "#666",
+    textAlign: "center",
   },
 });
 
-export default ParkingDetailsScreen; 
+export default ParkingDetails;

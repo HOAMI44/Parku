@@ -1,5 +1,5 @@
-import type { SliderProps } from 'tamagui'
-import { Slider, XStack } from 'tamagui'
+import type { SliderProps } from "tamagui";
+import { Slider, XStack } from "tamagui";
 
 export function SimpleSlider({ children, ...props }: SliderProps) {
   return (
@@ -10,5 +10,5 @@ export function SimpleSlider({ children, ...props }: SliderProps) {
       <Slider.Thumb size="$2" index={0} circular />
       {children}
     </Slider>
-  )
+  );
 }

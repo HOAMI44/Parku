@@ -1,6 +1,6 @@
 import { FlatList, StyleSheet, Text, View } from "react-native";
 import React from "react";
-import { ParkingSpaceWithName } from "../types";
+import { ParkingSpaceWithName } from "@/types/types";
 import ParkingSpaceCard from "./ParkingSpaceCard";
 
 type ParkingSpaceListProps = {

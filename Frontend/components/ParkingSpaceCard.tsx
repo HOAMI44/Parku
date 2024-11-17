@@ -1,14 +1,23 @@
-import { StyleSheet, Text, TouchableOpacity, View, Image } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View, Image, Dimensions } from "react-native";
 import React from "react";
 import { ParkingSpaceWithName } from "@/types/types";
+import { useRouter } from "expo-router";
 
 type ParkingSpaceCardProps = {
   parkingSpace: ParkingSpaceWithName;
 };
 
 const ParkingSpaceCard = ({ parkingSpace }: ParkingSpaceCardProps) => {
+  const router = useRouter();
+
   return (
-    <TouchableOpacity style={styles.parkingSpace}>
+    <TouchableOpacity 
+      style={styles.parkingSpace} 
+      onPress={() => router.push({
+        pathname: "/ParkingDetails",
+        params: { parkingSpace: JSON.stringify(parkingSpace) }
+      })}
+    >
       <Image
         source={{ uri: parkingSpace.image_url }}
         style={styles.parkingImage}
@@ -21,10 +30,16 @@ const ParkingSpaceCard = ({ parkingSpace }: ParkingSpaceCardProps) => {
           numberOfLines={1}
           style={styles.parkingUserFullName}
         >{`${parkingSpace.users.first_name} ${parkingSpace.users.last_name}`}</Text>
-        <Text
-          numberOfLines={1}
-          style={styles.parkingPricePerHour}
-        >{`${parkingSpace.price_per_hour} € / h`}</Text>
+        <View style={styles.numbers}>
+          <Text
+            numberOfLines={1}
+            style={styles.parkingPricePerHour}
+          >{`${parkingSpace.price_per_hour} € / h`}</Text>
+          <Text
+            numberOfLines={1}
+            style={styles.dimensions}
+          >{`W: ${parkingSpace.width} | L: ${parkingSpace.length}`}</Text>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -65,4 +80,12 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     color: "#2E8B57",
   },
+  numbers: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  dimensions: {
+    fontSize: 14,
+    fontWeight: "500",
+  }
 });

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import * as Location from "expo-location";
 
-const useUserLocation = () => {
+const useLocation = () => {
   console.log("Fetching location");
 
   const [location, setLocation] = useState<Location.LocationObject | null>(
@@ -37,4 +37,4 @@ const useUserLocation = () => {
   return { location, loading, error };
 };
 
-export default useUserLocation;
+export default useLocation;

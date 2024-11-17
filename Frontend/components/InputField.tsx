@@ -1,16 +1,11 @@
-import { StyleSheet, View, Text } from "react-native";
+import { StyleSheet, View } from "react-native";
 import React from "react";
 import { TextInput } from "react-native-gesture-handler";
-
-type Props = {};
 
 const InputField = (props: React.ComponentProps<typeof TextInput>) => {
   return (
     <View>
-      <TextInput
-        style={styles.inputField}
-        {...props}
-      />
+      <TextInput style={styles.inputField} {...props} />
     </View>
   );
 };
@@ -26,6 +21,5 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     fontSize: 16,
     color: "black",
-    
   },
 });

@@ -17,14 +17,18 @@ import {
   useGetUserById,
   useGetAllParkingSpacesWithName,
 } from "@/hooks/database/queries";
-import useUserLocation from "@/hooks/useUserLocation";
+import useLocation from "@/hooks/useLocation";
 
 type FilterCriteria = {
   userLocation?: {
     latitude: number;
     longitude: number;
   };
+  length?: number;
+  width?: number;
   distance?: number;
+  minPrice?: number;
+  maxPrice?: number;
 };
 
 const HomeScreen = (): JSX.Element => {
@@ -35,7 +39,7 @@ const HomeScreen = (): JSX.Element => {
     session?.user?.id ?? ""
   );
   const { location: userLocation, loading: locationLoading } =
-    useUserLocation();
+    useLocation();
   const isLoading = userLoading || parkingSpacesLoading || locationLoading;
 
   const [filterVisible, setFilterVisible] = useState<boolean>(false);
@@ -82,7 +86,7 @@ const HomeScreen = (): JSX.Element => {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0000ff" />
+        <ActivityIndicator size="large" color="#82DFF1" />
         <Text>Loading parking spots...</Text>
       </View>
     );
@@ -95,7 +99,7 @@ const HomeScreen = (): JSX.Element => {
         <TouchableOpacity
           style={styles.exploreButton}
           onPress={() => {
-            router.push("/explore");
+            router.push("/Explore");
           }}
         >
           <Text style={styles.exploreButtonText}>Go explore parking lots!</Text>

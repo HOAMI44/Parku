@@ -9,9 +9,9 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router"; // Importiere den Router
-import { supabase } from '../lib/supabase'; // Make sure you have this configured
+import { supabase } from "../lib/supabase"; // Make sure you have this configured
 
-const SignInDetail = () => {
+const SignUpDetail = () => {
   const router = useRouter(); // Router initialisieren
 
   const [firstName, setFirstName] = useState("");
@@ -21,35 +21,37 @@ const SignInDetail = () => {
   const createUser = async () => {
     try {
       // Get the current user's ID from Supabase Auth
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       console.log(user);
       if (!user) {
-        console.error('No authenticated user found');
+        console.error("No authenticated user found");
         return;
       }
 
       const { data, error } = await supabase
-        .from('users')
+        .from("users")
         .insert([
           {
             id: user.id,
             first_name: firstName,
             last_name: lastName,
             phone_number: phone,
-            role: 'individual'
-          }
+            role: "individual",
+          },
         ])
         .select();
 
       if (error) {
-        console.error('Error creating user:', error);
+        console.error("Error creating user:", error);
         return;
       }
 
       router.dismissAll();
-      router.push("/(tabs)");
+      router.push("/(tabs)/Home"); // Redirect to the next screen
     } catch (error) {
-      console.error('Error:', error);
+      console.error("Error:", error);
     }
   };
 
@@ -62,7 +64,12 @@ const SignInDetail = () => {
 
       {/* First Name Input */}
       <View style={styles.inputContainer}>
-        <Ionicons name="person-outline" size={20} color="gray" style={styles.icon} />
+        <Ionicons
+          name="person-outline"
+          size={20}
+          color="gray"
+          style={styles.icon}
+        />
         <TextInput
           style={styles.input}
           placeholder="First Name"
@@ -73,7 +80,12 @@ const SignInDetail = () => {
 
       {/* Last Name Input */}
       <View style={styles.inputContainer}>
-        <Ionicons name="person-outline" size={20} color="gray" style={styles.icon} />
+        <Ionicons
+          name="person-outline"
+          size={20}
+          color="gray"
+          style={styles.icon}
+        />
         <TextInput
           style={styles.input}
           placeholder="Last Name"
@@ -84,7 +96,12 @@ const SignInDetail = () => {
 
       {/* Phone Input */}
       <View style={styles.inputContainer}>
-        <Ionicons name="call-outline" size={20} color="gray" style={styles.icon} />
+        <Ionicons
+          name="call-outline"
+          size={20}
+          color="gray"
+          style={styles.icon}
+        />
         <TextInput
           style={styles.input}
           placeholder="Phone Number"
@@ -95,14 +112,8 @@ const SignInDetail = () => {
       </View>
 
       {/* Continue Button */}
-      <TouchableOpacity
-        style={styles.continueButton}
-        onPress={createUser}
-      >
-        <LinearGradient
-          colors={["#82DFF1", "#82DFF1"]}
-          style={styles.gradient}
-        >
+      <TouchableOpacity style={styles.continueButton} onPress={createUser}>
+        <LinearGradient colors={["#82DFF1", "#82DFF1"]} style={styles.gradient}>
           <Text style={styles.continueText}>Continue</Text>
           <Ionicons name="arrow-forward-outline" size={20} color="white" />
         </LinearGradient>
@@ -111,7 +122,7 @@ const SignInDetail = () => {
   );
 };
 
-export default SignInDetail;
+export default SignUpDetail;
 
 const styles = StyleSheet.create({
   container: {

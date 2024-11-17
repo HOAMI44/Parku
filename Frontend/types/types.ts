@@ -35,10 +35,10 @@ export type ParkingSpace = {
   availability_start: string;
   availability_end: string;
   is_available: boolean;
-  created_at: string;
+  created_at?: string;
   description?: string;
-  length?: number;
-  width?: number;
+  length: number;
+  width: number;
 };
 
 // Booking type
