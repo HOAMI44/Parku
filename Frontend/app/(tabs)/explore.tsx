@@ -22,6 +22,7 @@ import { Marker as RNMarker } from 'react-native-maps';
 import { useRouter } from "expo-router";
 import { GestureHandlerRootView, RectButton } from 'react-native-gesture-handler';
 import Animated from 'react-native';
+import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
 
 interface ParkingSpace {
   id: number;
@@ -119,24 +120,67 @@ const ExploreScreen = () => {
   }, []);
 
   useEffect(() => {
-    if (searchText.trim() === '') {
-      setFilteredParkingData(parkingData);
-    } else {
-      const filtered = parkingData.filter(spot => 
-        spot.address.toLowerCase().includes(searchText.toLowerCase())
-      );
-      setFilteredParkingData(filtered);
+    const searchTimer = setTimeout(async () => {
+      if (searchText.trim() === '') {
+        setFilteredParkingData(parkingData);
+        return;
+      }
 
-       if (filtered.length > 0) {
-      const firstResult = filtered[0];
-      mapRef.current?.animateToRegion({
-        latitude: firstResult.latitude,
-        longitude: firstResult.longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      });
-    }
-  }
+      try {
+        // Search for location using geocoding
+        const geocodedLocations = await Location.geocodeAsync(searchText);
+        
+        if (geocodedLocations && geocodedLocations.length > 0) {
+          const searchLocation = geocodedLocations[0];
+          
+          // Filter parking spots within 5km radius of the searched location
+          const filtered = parkingData.filter(spot => {
+            const distance = calculateDistance(
+              searchLocation.latitude,
+              searchLocation.longitude,
+              spot.latitude,
+              spot.longitude
+            );
+            return distance <= 5; // 5km radius
+          });
+
+          setFilteredParkingData(filtered);
+
+          // Animate map to the searched location
+          mapRef.current?.animateToRegion({
+            latitude: searchLocation.latitude,
+            longitude: searchLocation.longitude,
+            latitudeDelta: 0.05,
+            longitudeDelta: 0.05,
+          });
+        } else {
+          // Fallback to address search if no location found
+          const filtered = parkingData.filter(spot => 
+            spot.address.toLowerCase().includes(searchText.toLowerCase())
+          );
+          setFilteredParkingData(filtered);
+
+          if (filtered.length > 0) {
+            const firstResult = filtered[0];
+            mapRef.current?.animateToRegion({
+              latitude: firstResult.latitude,
+              longitude: firstResult.longitude,
+              latitudeDelta: 0.01,
+              longitudeDelta: 0.01,
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Geocoding error:', error);
+        // Fallback to simple address filtering on error
+        const filtered = parkingData.filter(spot => 
+          spot.address.toLowerCase().includes(searchText.toLowerCase())
+        );
+        setFilteredParkingData(filtered);
+      }
+    }, 500); // 500ms delay
+
+    return () => clearTimeout(searchTimer);
   }, [searchText, parkingData]);
 
   const handleRemoveCard = (cardId: number) => {
@@ -340,18 +384,23 @@ const ExploreScreen = () => {
         <View style={styles.topControls}>
           <View style={styles.searchContainer}>
             <TextInput
-              style={styles.searchBar}
-              placeholder="Search location"
-              placeholderTextColor="#999"
+              style={styles.searchInput}
+              placeholder="Search cities, addresses, or places"
               value={searchText}
               onChangeText={setSearchText}
+              onSubmitEditing={() => {
+                // This will trigger the useEffect with searchText
+              }}
             />
-            {searchText !== "" && (
+            {searchText.length > 0 && (
               <TouchableOpacity 
-                style={styles.clearButton} 
-                onPress={resetSearch}
+                style={styles.clearButton}
+                onPress={() => {
+                  setSearchText('');
+                  setFilteredParkingData(parkingData);
+                }}
               >
-                <Icon name="times" size={20} color="#999" />
+                <Icon name="times" size={20} color="#666" />
               </TouchableOpacity>
             )}
           </View>
@@ -470,27 +519,26 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
     marginRight: 10,
+    position: 'relative',
   },
-  searchBar: {
-    flex: 1,
+  searchInput: {
     height: 40,
-    backgroundColor: "white",
-    borderRadius: 20,
+    backgroundColor: 'white',
     paddingHorizontal: 15,
+    borderRadius: 20,
+    fontSize: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 3,
-    marginRight: 10,
   },
   clearButton: {
     position: 'absolute',
-    right: 10,
-    padding: 5,
+    right: 15,
+    top: 10,
+    zIndex: 2,
   },
   focusButton: {
     height: 40,
