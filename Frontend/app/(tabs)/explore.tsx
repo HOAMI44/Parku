@@ -126,7 +126,17 @@ const ExploreScreen = () => {
         spot.address.toLowerCase().includes(searchText.toLowerCase())
       );
       setFilteredParkingData(filtered);
+
+       if (filtered.length > 0) {
+      const firstResult = filtered[0];
+      mapRef.current?.animateToRegion({
+        latitude: firstResult.latitude,
+        longitude: firstResult.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      });
     }
+  }
   }, [searchText, parkingData]);
 
   const handleRemoveCard = (cardId: number) => {
