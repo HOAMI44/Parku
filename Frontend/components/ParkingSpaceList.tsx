@@ -4,7 +4,7 @@ import { ParkingSpaceWithName } from "@/types/types";
 import ParkingSpaceCard from "./ParkingSpaceCard";
 
 type ParkingSpaceListProps = {
-  parkingSpaces: ParkingSpaceWithName[] | null;
+  parkingSpaces: (ParkingSpaceWithName & { distance?: string })[] | null;
   noResultsText?: string;
 };
 
@@ -23,7 +23,12 @@ const ParkingSpaceList = ({
       ) : (
         <FlatList
           data={parkingSpaces}
-          renderItem={({ item }) => <ParkingSpaceCard parkingSpace={item} />}
+          renderItem={({ item }) => (
+            <ParkingSpaceCard 
+              parkingSpace={item} 
+              distance={item.distance}
+            />
+          )}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listStyle}
         />

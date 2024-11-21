@@ -264,6 +264,17 @@ if (isNaN(availabilityStart.getTime()) || isNaN(availabilityEnd.getTime())) {
 
   return (
     <>
+      <Stack.Screen 
+        options={{
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => router.back()}>
+              <Ionicons name="arrow-back" size={24} color="#007AFF" />
+            </TouchableOpacity>
+          ),
+          headerTitle: "Details"
+        }} 
+      />
+      
       <ScrollView style={styles.container}>
         {/* Header Image or Placeholder */}
         <View style={styles.imageContainer}>
@@ -294,8 +305,8 @@ if (isNaN(availabilityStart.getTime()) || isNaN(availabilityEnd.getTime())) {
             <View style={styles.infoRow}>
               <Ionicons name="calendar" size={24} color="#666" />
               <Text style={styles.infoText}>
-                Available: {formatDate(parkingSpace.availability_start)} -{" "}
-                {formatDate(parkingSpace.availability_end)}
+                Available: {formatDate(parkingSpace.availability_start)} {new Date(parkingSpace.availability_start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} -{" "}
+                {formatDate(parkingSpace.availability_end)} {new Date(parkingSpace.availability_end).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
               </Text>
             </View>
 

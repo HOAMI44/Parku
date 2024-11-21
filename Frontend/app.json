@@ -14,14 +14,18 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.Frontend"
+      "bundleIdentifier": "com.anonymous.Frontend",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "This app needs access to location to find parking spots near you."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.anonymous.Frontend"
+      "package": "com.anonymous.Frontend",
+      "permissions": ["ACCESS_FINE_LOCATION"]
     },
     "web": {
       "bundler": "metro",

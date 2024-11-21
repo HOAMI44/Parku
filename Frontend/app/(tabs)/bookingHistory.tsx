@@ -14,6 +14,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
 import { Booking, ParkingSpace } from "../../types/types";
 import { formatDate, formatTime, formatCurrency } from "../../utils/formatters";
+import { checkBookingOverlap } from "@/utils/bookingValidation";
 
 type BookingWithSpace = Booking & {
   parking_space: ParkingSpace;
@@ -98,7 +99,9 @@ const BookingHistory = () => {
       <View style={styles.bookingDetails}>
         <View style={styles.detailRow}>
           <Ionicons name="calendar-outline" size={16} color="#666" />
-          <Text style={styles.detailText}>{formatDate(item.start_time)}</Text>
+          <Text style={styles.detailText}>
+            From: {formatDate(item.start_time)} - To: {formatDate(item.end_time)}
+          </Text>
         </View>
 
         <View style={styles.detailRow}>
