@@ -1,7 +1,7 @@
 import { User, ParkingSpaceWithName } from "@/types/types";
 import { supabase } from "../../lib/supabase";
 import useSupabase from "./useSupaBase";
-import { useCallback } from "react";
+import { useCallback, useState, useEffect } from "react";
 
 export const useGetAllParkingSpacesWithName = () => {
   console.log("Fetching all parking spaces with user names");
@@ -71,4 +71,75 @@ export const useGetAverageReviewScoreByUserId = (userId: string) => {
   }, [userId]);
 
   return useSupabase<number>(queryFn);
+};
+
+export const useGetCompanyById = (companyId: string) => {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCompany = async () => {
+      if (!companyId) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from("companies")
+          .select("*")
+          .eq("id", companyId)
+          .single();
+
+        if (error) throw error;
+        setData(data);
+      } catch (error) {
+        console.error("Error fetching company:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCompany();
+  }, [companyId]);
+
+  return { data, loading };
+};
+
+export const useGetParkingSpacesByCompanyId = (companyId: string) => {
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchParkingSpaces = async () => {
+      if (!companyId) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from("parking_spaces")
+          .select(`
+            *,
+            users (
+              first_name,
+              last_name
+            )
+          `)
+          .eq("company_id", companyId);
+
+        if (error) throw error;
+        setData(data);
+      } catch (error) {
+        console.error("Error fetching company parking spaces:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchParkingSpaces();
+  }, [companyId]);
+
+  return { data, loading };
 };

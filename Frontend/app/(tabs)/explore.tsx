@@ -15,15 +15,12 @@ import * as Location from "expo-location";
 import { supabase } from "../../lib/supabase";
 import CardMap from "@/components/CardMap";
 import Icon from "react-native-vector-icons/FontAwesome";
-import { Swipeable } from "react-native-gesture-handler";
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import BottomSheet from "react-native-gesture-bottom-sheet";
 import GestureRecognizer from "react-native-swipe-gestures";
 import { Marker as RNMarker } from 'react-native-maps';
 import { useRouter } from "expo-router";
-import { GestureHandlerRootView, RectButton } from 'react-native-gesture-handler';
-import Animated from 'react-native';
-import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
-import ParkingSpaceCard from "@/components/ParkingSpaceCard";
+import SwipeableCard from '@/components/SwipeableCard';
 import { calculateDistance } from "../../utils/calculateDistance";
 
 interface ParkingSpace {
@@ -46,7 +43,7 @@ interface ParkingSpace {
 }
 
 interface MarkerRefs {
-  [key: number]: RNMarker | null;
+  [key: number]: typeof RNMarker | null;
 }
 
 const INITIAL_REGION = {
@@ -67,6 +64,7 @@ const ExploreScreen = () => {
   const [filteredParkingData, setFilteredParkingData] = useState<ParkingSpace[]>([]);
   const [highlightedCardId, setHighlightedCardId] = useState<number | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
+  const [activeCardIndex, setActiveCardIndex] = useState(0);
 
   useEffect(() => {
     const requestLocationPermission = async () => {
@@ -279,6 +277,27 @@ const ExploreScreen = () => {
     });
   };
 
+  const handleSwipeLeft = (cardId: number) => {
+    // Move to next card
+    setActiveCardIndex(prevIndex => {
+      if (prevIndex < filteredParkingData.length - 1) {
+        return prevIndex + 1;
+      }
+      // If we're at the last card, stay there
+      return prevIndex;
+    });
+  };
+
+  const handleSwipeRight = (cardId: number) => {
+    // Don't change the active card index when booking
+    router.push({
+      pathname: '/ParkingDetails',
+      params: { 
+        parkingSpace: JSON.stringify(parkingData.find(spot => spot.id === cardId)) 
+      }
+    });
+  };
+
   const renderCard = (card: ParkingSpace) => {
     const distance = location
       ? calculateDistance(
@@ -290,44 +309,14 @@ const ExploreScreen = () => {
       : undefined;
 
     return (
-      <GestureHandlerRootView key={card.id} style={styles.cardContainer}>
-        <Swipeable
-          renderRightActions={() => (
-            <TouchableOpacity 
-              style={[styles.swipeAction, styles.deleteAction]}
-              onPress={() => handleRemoveCard(card.id)}
-            >
-              <View style={styles.actionContent}>
-                <Icon name="trash" size={24} color="white" />
-                <Text style={styles.actionText}>Remove</Text>
-              </View>
-            </TouchableOpacity>
-          )}
-          renderLeftActions={() => (
-            <TouchableOpacity 
-              style={[styles.swipeAction, styles.detailsAction]}
-              onPress={() => handleNavigateToDetails(card.id)}
-            >
-              <View style={styles.actionContent}>
-                <Icon name="info-circle" size={24} color="white" />
-                <Text style={styles.actionText}>Details</Text>
-              </View>
-            </TouchableOpacity>
-          )}
-          overshootRight={false}
-          overshootLeft={false}
-        >
-          <TouchableOpacity
-            activeOpacity={0.95}
-            onPress={() => handleCardFocus(card.id, card.latitude, card.longitude)}
-          >
-            <ParkingSpaceCard 
-              parkingSpace={card} 
-              distance={distance}
-            />
-          </TouchableOpacity>
-        </Swipeable>
-      </GestureHandlerRootView>
+      <SwipeableCard
+        key={card.id}
+        parkingSpace={card}
+        distance={distance}
+        onSwipeLeft={() => handleSwipeLeft(card.id)}
+        onSwipeRight={() => handleSwipeRight(card.id)}
+        onSwipeUp={onSwipeUp}
+      />
     );
   };
 
@@ -401,20 +390,14 @@ const ExploreScreen = () => {
         {filteredParkingData.length > 0 ? (
           <ScrollView
             ref={scrollViewRef}
+            horizontal
+            pagingEnabled
+            scrollEnabled={false} // Disable manual scrolling
+            showsHorizontalScrollIndicator={false}
+            style={{ width: '100%' }}
             contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
           >
-            {filteredParkingData.map((card) => {
-              const distance = location
-                ? calculateDistance(
-                    location.coords.latitude,
-                    location.coords.longitude,
-                    card.latitude,
-                    card.longitude
-                  ).toFixed(1)
-                : "N/A";
-              return renderCard(card);
-            })}
+            {renderCard(filteredParkingData[activeCardIndex])}
           </ScrollView>
         ) : (
           <Text style={{ textAlign: "center", marginTop: 20, fontSize: 18 }}>
