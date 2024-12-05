@@ -32,6 +32,14 @@ type FilterCriteria = {
   maxPrice?: number;
 };
 
+const isCurrentlyAvailable = (space: ParkingSpaceWithName): boolean => {
+  const now = new Date();
+  const startTime = new Date(space.availability_start);
+  const endTime = new Date(space.availability_end);
+  
+  return now >= startTime && now <= endTime;
+};
+
 const HomeScreen = (): JSX.Element => {
   const { session } = useAuth();
   const { data: parkingSpaces, loading: parkingSpacesLoading } =
@@ -52,8 +60,11 @@ const HomeScreen = (): JSX.Element => {
     console.log("Applying filter with criteria:", filterCriteria);
     console.log(parkingSpaces);
     if (parkingSpaces) {
+      // Filter out unavailable parking spaces first
+      const availableSpaces = parkingSpaces.filter(isCurrentlyAvailable);
+      
       if (userLocation) {
-        const filtered = filterParkingSpots(parkingSpaces, {
+        const filtered = filterParkingSpots(availableSpaces, {
           ...filterCriteria,
           userLocation: {
             latitude: userLocation.coords.latitude,
@@ -62,8 +73,8 @@ const HomeScreen = (): JSX.Element => {
         });
         console.log("Filtered parking spaces with user location:", filtered);
         setFilteredParkingSpaces(filtered);
-      } else if (parkingSpaces) {
-        const filtered = filterParkingSpots(parkingSpaces, filterCriteria);
+      } else {
+        const filtered = filterParkingSpots(availableSpaces, filterCriteria);
         console.log("Filtered parking spaces without user location:", filtered);
         setFilteredParkingSpaces(filtered);
       }
@@ -84,7 +95,10 @@ const HomeScreen = (): JSX.Element => {
 
   useEffect(() => {
     if (userLocation && parkingSpaces) {
-      const nearbyParking = filterParkingSpots(parkingSpaces, {
+      // Filter out unavailable parking spaces first
+      const availableSpaces = parkingSpaces.filter(isCurrentlyAvailable);
+      
+      const nearbyParking = filterParkingSpots(availableSpaces, {
         userLocation: {
           latitude: userLocation.coords.latitude,
           longitude: userLocation.coords.longitude,

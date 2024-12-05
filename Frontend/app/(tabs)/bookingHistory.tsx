@@ -15,68 +15,18 @@ import { supabase } from "../../lib/supabase";
 import { Booking, ParkingSpace } from "../../types/types";
 import { formatDate, formatTime, formatCurrency } from "../../utils/formatters";
 import { checkBookingOverlap } from "@/utils/bookingValidation";
+import { useGetUserBookings } from "../../hooks/database/queries";
+import { BookingWithSpace } from "../types/types";
 
-type BookingWithSpace = Booking & {
-  parking_space: ParkingSpace;
-};
 
 const BookingHistory = () => {
   const router = useRouter();
-  const { session } = useAuth();
-  const [upcomingBookings, setUpcomingBookings] = useState<BookingWithSpace[]>(
-    []
-  );
-  const [pastBookings, setPastBookings] = useState<BookingWithSpace[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { upcomingBookings, pastBookings, loading, refetch } = useGetUserBookings();
   const [refreshing, setRefreshing] = useState(false);
-
-  const fetchBookings = async () => {
-    if (!session) return;
-
-    try {
-      const { data: bookings, error } = await supabase
-        .from("bookings")
-        .select(
-          `
-          *,
-          parking_space:space_id (*)
-        `
-        )
-        .eq("user_id", session.user.id)
-        .order("start_time", { ascending: true });
-
-      if (error) throw error;
-
-      const now = new Date();
-      const upcoming: BookingWithSpace[] = [];
-      const past: BookingWithSpace[] = [];
-
-      bookings?.forEach((booking: BookingWithSpace) => {
-        const endTime = new Date(booking.end_time);
-        if (endTime > now) {
-          upcoming.push(booking);
-        } else {
-          past.push(booking);
-        }
-      });
-
-      setUpcomingBookings(upcoming);
-      setPastBookings(past);
-    } catch (error) {
-      console.error("Error fetching bookings:", error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchBookings();
-  }, [session]);
 
   const onRefresh = () => {
     setRefreshing(true);
-    fetchBookings();
+    refetch().finally(() => setRefreshing(false));
   };
 
   const renderBookingItem = ({ item }: { item: BookingWithSpace }) => (

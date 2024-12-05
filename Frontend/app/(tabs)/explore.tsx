@@ -12,46 +12,14 @@ import {
 } from "react-native";
 import MapView, { PROVIDER_DEFAULT, Marker, Region } from "react-native-maps";
 import * as Location from "expo-location";
-import { supabase } from "../../lib/supabase";
-import CardMap from "@/components/CardMap";
 import Icon from "react-native-vector-icons/FontAwesome";
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import BottomSheet from "react-native-gesture-bottom-sheet";
 import GestureRecognizer from "react-native-swipe-gestures";
-import { Marker as RNMarker } from 'react-native-maps';
 import { useRouter } from "expo-router";
 import SwipeableCard from '@/components/SwipeableCard';
 import { calculateDistance } from "../../utils/calculateDistance";
-
-interface ParkingSpace {
-  id: number;
-  address: string;
-  latitude: number;
-  longitude: number;
-  price_per_hour: number;
-  availability_start: string;
-  availability_end: string;
-  is_available: boolean;
-  description: string;
-  width: number;
-  length: number;
-  image_url: string;
-  users: {
-    first_name: string;
-    last_name: string;
-  };
-}
-
-interface MarkerRefs {
-  [key: number]: typeof RNMarker | null;
-}
-
-const INITIAL_REGION = {
-  latitude: 47.41375,
-  longitude: 9.74151,
-  latitudeDelta: 0.01,
-  longitudeDelta: 0.01,
-};
+import { ExplorerParkingSpace, MarkerRefs, INITIAL_REGION } from "@/types/types";
+import { useExplorerParkingSpaces } from "@/hooks/database/queries";
 
 const ExploreScreen = () => {
   const router = useRouter();
@@ -60,12 +28,18 @@ const ExploreScreen = () => {
   const bottomSheet = useRef<BottomSheet>(null);
   const markerRefs = useMemo<MarkerRefs>(() => ({}), []);
   const [searchText, setSearchText] = useState("");
-  const [parkingData, setParkingData] = useState<ParkingSpace[]>([]);
-  const [filteredParkingData, setFilteredParkingData] = useState<ParkingSpace[]>([]);
   const [highlightedCardId, setHighlightedCardId] = useState<number | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const [activeCardIndex, setActiveCardIndex] = useState(0);
 
+  const {
+    parkingData,
+    filteredParkingData,
+    loading,
+    setFilteredParkingData,
+  } = useExplorerParkingSpaces();
+
+  // Location permission effect
   useEffect(() => {
     const requestLocationPermission = async () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
@@ -76,39 +50,11 @@ const ExploreScreen = () => {
 
       let currentLocation = await Location.getCurrentPositionAsync({});
       setLocation(currentLocation);
-      console.log("Location:", currentLocation);
     };
     requestLocationPermission();
   }, []);
 
-  useEffect(() => {
-    const fetchParkingSpots = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("parking_spaces")
-          .select(`
-            *,
-            users:user_id (
-              first_name,
-              last_name
-            )
-          `);
-
-        if (error) {
-          console.error("Error fetching parking spots:", error);
-        } else {
-          console.log("Fetched parking spots data:", data);
-          setParkingData(data);
-          setFilteredParkingData(data);
-        }
-      } catch (err) {
-        console.error("Error:", err);
-      }
-    };
-
-    fetchParkingSpots();
-  }, []);
-
+  // Search effect
   useEffect(() => {
     const searchTimer = setTimeout(async () => {
       if (searchText.trim() === '') {
@@ -117,13 +63,11 @@ const ExploreScreen = () => {
       }
 
       try {
-        // Search for location using geocoding
         const geocodedLocations = await Location.geocodeAsync(searchText);
         
         if (geocodedLocations && geocodedLocations.length > 0) {
           const searchLocation = geocodedLocations[0];
           
-          // Filter parking spots within 5km radius of the searched location
           const filtered = parkingData.filter(spot => {
             const distance = calculateDistance(
               searchLocation.latitude,
@@ -131,12 +75,10 @@ const ExploreScreen = () => {
               spot.latitude,
               spot.longitude
             );
-            return distance <= 5; // 5km radius
+            return distance <= 5;
           });
 
           setFilteredParkingData(filtered);
-
-          // Animate map to the searched location
           mapRef.current?.animateToRegion({
             latitude: searchLocation.latitude,
             longitude: searchLocation.longitude,
@@ -144,7 +86,6 @@ const ExploreScreen = () => {
             longitudeDelta: 0.05,
           });
         } else {
-          // Fallback to address search if no location found
           const filtered = parkingData.filter(spot => 
             spot.address.toLowerCase().includes(searchText.toLowerCase())
           );
@@ -162,13 +103,12 @@ const ExploreScreen = () => {
         }
       } catch (error) {
         console.error('Geocoding error:', error);
-        // Fallback to simple address filtering on error
         const filtered = parkingData.filter(spot => 
           spot.address.toLowerCase().includes(searchText.toLowerCase())
         );
         setFilteredParkingData(filtered);
       }
-    }, 500); // 500ms delay
+    }, 500);
 
     return () => clearTimeout(searchTimer);
   }, [searchText, parkingData]);
@@ -298,7 +238,7 @@ const ExploreScreen = () => {
     });
   };
 
-  const renderCard = (card: ParkingSpace) => {
+  const renderCard = (card: ExplorerParkingSpace) => {
     const distance = location
       ? calculateDistance(
           location.coords.latitude,
@@ -311,7 +251,7 @@ const ExploreScreen = () => {
     return (
       <SwipeableCard
         key={card.id}
-        parkingSpace={card}
+        parkingSpace={card }
         distance={distance}
         onSwipeLeft={() => handleSwipeLeft(card.id)}
         onSwipeRight={() => handleSwipeRight(card.id)}

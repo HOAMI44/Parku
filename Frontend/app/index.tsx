@@ -6,7 +6,7 @@ import {
   View,
 } from "react-native";
 import React, { useEffect } from "react";
-import { Link, useRouter } from "expo-router";
+import { Link, useRouter, Stack } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import Animated, { FadeInDown, FadeInRight } from "react-native-reanimated";
@@ -28,6 +28,12 @@ const Welcome = () => {
       style={{ flex: 1 }}
       resizeMode="cover"
     >
+      <Stack.Screen 
+        options={{
+          title: "Welcome",
+          headerBackTitle: "Back",
+        }} 
+      />
       <View style={styles.container}>
         <LinearGradient
           colors={[
@@ -48,34 +54,14 @@ const Welcome = () => {
               style={styles.description}
               entering={FadeInRight.delay(300).duration(300)}
             >
-              Park anywhere with Parku!
+              Parking made easy with Parku!
             </Animated.Text>
             <View style={styles.socialLoginWrappers}>
               <Animated.View entering={FadeInDown.delay(500).duration(300)}>
-                <Link href={"/SignUp"} asChild>
+                <Link href="/SignUp" asChild>
                   <TouchableOpacity style={styles.btn}>
                     <Ionicons name="mail-outline" size={20} color="black" />
                     <Text style={styles.btnText}>Continue with Email</Text>
-                  </TouchableOpacity>
-                </Link>
-              </Animated.View>
-            </View>
-            <View style={styles.socialLoginWrappers}>
-              <Animated.View entering={FadeInDown.delay(700).duration(300)}>
-                <Link href={"/SignUp"} asChild>
-                  <TouchableOpacity style={styles.btn}>
-                    <Ionicons name="logo-google" size={20} color="black" />
-                    <Text style={styles.btnText}>Continue with Google</Text>
-                  </TouchableOpacity>
-                </Link>
-              </Animated.View>
-            </View>
-            <View style={styles.socialLoginWrappers}>
-              <Animated.View entering={FadeInDown.delay(1100).duration(300)}>
-                <Link href={"/signUp"} asChild>
-                  <TouchableOpacity style={styles.btn}>
-                    <Ionicons name="logo-apple" size={20} color="black" />
-                    <Text style={styles.btnText}>Continue with Apple</Text>
                   </TouchableOpacity>
                 </Link>
               </Animated.View>

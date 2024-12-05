@@ -80,3 +80,70 @@ export type ParkingSpaceWithName = ParkingSpace & {
     last_name: string;
   };
 };
+
+export type CreateParkingSpaceData = Omit<ParkingSpace, 'id' | 'created_at'>;
+
+export type ImageUploadResponse = {
+  publicUrl: string;
+  error?: Error;
+};
+
+export type ExplorerParkingSpace = {
+  id: number;
+  address: string;
+  latitude: number;
+  longitude: number;
+  price_per_hour: number;
+  availability_start: string;
+  availability_end: string;
+  is_available: boolean;
+  description: string;
+  width: number;
+  length: number;
+  image_url: string;
+  users: {
+    first_name: string;
+    last_name: string;
+  };
+};
+
+export type MarkerRefs = {
+  [key: number]: typeof import('react-native-maps').Marker | null;
+};
+
+export const INITIAL_REGION = {
+  latitude: 47.41375,
+  longitude: 9.74151,
+  latitudeDelta: 0.01,
+  longitudeDelta: 0.01,
+} as const;
+
+export type TimePickerProps = {
+  startTime: Date;
+  endTime: Date;
+  handleStartChange: (event: any, date?: Date) => void;
+  handleEndChange: (event: any, date?: Date) => void;
+  setShowStartDate?: (show: boolean) => void;
+  setShowStartTime?: (show: boolean) => void;
+  setShowEndDate?: (show: boolean) => void;
+  setShowEndTime?: (show: boolean) => void;
+};
+
+export type BookingData = {
+  user_id: string;
+  space_id: string;
+  start_time: string;
+  end_time: string;
+  total_price: number;
+  status: string;
+};
+
+export type BookingValidationResponse = {
+  isValid: boolean;
+  error?: string;
+};
+
+export type SignUpResponse = {
+  data: any | null;
+  error: Error | null;
+};

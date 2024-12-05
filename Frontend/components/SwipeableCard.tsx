@@ -177,19 +177,25 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     zIndex: 100,
     top: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
   },
   likeLabel: {
     right: 40,
     borderColor: '#4CAF50',
+    backgroundColor: 'rgba(76, 175, 80, 0.55)',
   },
   nopeLabel: {
     left: 40,
     borderColor: '#FF3B30',
+    backgroundColor: 'rgba(255, 59, 48, 0.55)',
   },
   overlayText: {
     fontSize: 32,
     fontWeight: 'bold',
     textTransform: 'uppercase',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -203,6 +209,7 @@ const styles = StyleSheet.create({
     top: 40,
     alignSelf: 'center',
     borderColor: '#007AFF',
+    backgroundColor: 'rgba(0, 122, 255, 0.55)',
   },
   listButton: {
     backgroundColor: '#007AFF',

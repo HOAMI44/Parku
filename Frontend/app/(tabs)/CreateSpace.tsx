@@ -23,6 +23,8 @@ import { v4 as uuidv4 } from 'uuid';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useRouter } from "expo-router";
 import { format } from 'date-fns';
+import { uploadParkingSpaceImage, createParkingSpace } from "../../hooks/database/queries";
+import { CreateParkingSpaceData } from "@/types/types";
 
 const CreateSpace: React.FC = () => {
   const [name, setName] = useState<string>("");
@@ -69,9 +71,9 @@ const CreateSpace: React.FC = () => {
     }
   };
 
-  const createSpace = async () => {
+  const handleCreateSpace = async () => {
     try {
-      // Helper function for number formatting
+      // Input validation
       const cleanNumber = (value: string) => {
         return value
           .trim()
@@ -97,113 +99,52 @@ const CreateSpace: React.FC = () => {
       if (!user) throw new Error("User not authenticated");
 
       let imageUrl = "";
-      
       if (image) {
-        try {
-          const formData = new FormData();
-          const uriParts = image.split('.');
-          const fileType = uriParts[uriParts.length - 1];
-
-          const imageFile = {
-            uri: image,
-            name: `${uuidv4()}.${fileType}`,
-            type: `image/${fileType}`
-          };
-
-          formData.append('file', imageFile as any);
-
-          const fileName = `${user.id}/${uuidv4()}.${fileType}`;
-
-          console.log('Uploading file:', {
-            fileName,
-            type: imageFile.type,
-            uri: imageFile.uri
-          });
-
-          const { data, error } = await supabase.storage
-            .from('parking_spaces')
-            .upload(fileName, formData, {
-              contentType: 'multipart/form-data'
-            });
-
-          if (error) {
-            console.error('Storage error:', error);
-            throw error;
-          }
-
-          const { data: { publicUrl } } = supabase.storage
-            .from('parking_spaces')
-            .getPublicUrl(fileName);
-              
-          imageUrl = publicUrl;
-          console.log('Upload successful, public URL:', imageUrl);
-
-        } catch (uploadError) {
-          console.error('Image upload error:', uploadError);
-          throw uploadError;
-        }
+        const { publicUrl, error: uploadError } = await uploadParkingSpaceImage(image, user.id);
+        if (uploadError) throw uploadError;
+        imageUrl = publicUrl;
       }
 
-      // Create timestamps for start and end times
-      const startTimestamp = startTime.toISOString();
-      const endTimestamp = endTime.toISOString();
-
-      // Validate that end time is after start time
-      if (endTime <= startTime) {
-        alert('End time must be after start time');
-        return;
-      }
-
-      const newParkingSpace: Partial<ParkingSpace> = {
+      const parkingSpaceData: CreateParkingSpaceData = {
         user_id: user.id,
         address,
         latitude,
         longitude,
         price_per_hour: parseFloat(cleanPrice),
-        availability_start: startTimestamp,  // Use timestamp
-        availability_end: endTimestamp,      // Use timestamp
+        availability_start: startTime.toISOString(),
+        availability_end: endTime.toISOString(),
         is_available: true,
         description,
-        length: cleanLength ? parseFloat(cleanLength) : undefined,
-        width: cleanWidth ? parseFloat(cleanWidth) : undefined,
+        length: cleanLength ? parseFloat(cleanLength) : 0,
+        width: cleanWidth ? parseFloat(cleanWidth) : 0,
         image_url: imageUrl,
       };
 
-      console.log('Sending to database:', newParkingSpace);
+      const { error } = await createParkingSpace(parkingSpaceData);
+      if (error) throw error;
 
-      const { data, error } = await supabase
-        .from('parking_spaces')
-        .insert(newParkingSpace)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Database error:', error);
-        throw error;
-      }
-
-      console.log("Parking space created:", data);
       alert('Parking space created successfully!');
-      
-      // Clear form fields
-      setName("");
-      setDescription("");
-      setLength("");
-      setWidth("");
-      setPrice("");
-      setImage("");
-      setAddress("");
-      setLatitude(0);
-      setLongitude(0);
-      setStartTime(null);
-      setEndTime(null);
-
+      clearForm();
       router.push('/Profile');
       
     } catch (error) {
       console.error("Error creating spot:", error);
       alert('Failed to create parking space. Please try again.');
     }
+  };
+
+  const clearForm = () => {
+    setName("");
+    setDescription("");
+    setLength("");
+    setWidth("");
+    setPrice("");
+    setImage("");
+    setAddress("");
+    setLatitude(0);
+    setLongitude(0);
+    setStartTime(null);
+    setEndTime(null);
   };
 
   const formatDateTime = (date: Date | null) => {
@@ -536,7 +477,7 @@ const CreateSpace: React.FC = () => {
       </View>
     )},
     { key: 'submit', component: (
-      <TouchableOpacity style={styles.createButton} onPress={createSpace}>
+      <TouchableOpacity style={styles.createButton} onPress={handleCreateSpace}>
         <LinearGradient
           colors={["#ff9d00", "#ffb347"]}
           style={styles.gradient}

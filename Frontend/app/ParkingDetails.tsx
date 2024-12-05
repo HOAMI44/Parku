@@ -19,6 +19,8 @@ import { formatCurrency, formatDate, formatTime } from "../utils/formatters";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { validateBookingTime, createBookingWithValidation } from "@/hooks/database/queries";
+import { TimePickerProps, BookingData } from "@/types/types";
 
 const ParkingDetails = (): JSX.Element => {
   const router = useRouter();
@@ -58,46 +60,6 @@ if (isNaN(availabilityStart.getTime()) || isNaN(availabilityEnd.getTime())) {
     setIsModalVisible(true);
   };
 
-  const validateTimeSelection = async () => {
-    if (startTime.getTime() < availabilityStart.getTime() || endTime.getTime() > availabilityEnd.getTime()) {
-      Alert.alert(
-        "Invalid Time Selection",
-        "Please select times within the parking space's availability window."
-      );
-      return false;
-    }
-
-    if (endTime.getTime() <= startTime.getTime()) {
-      Alert.alert(
-        "Invalid Time Selection",
-        "End time must be after start time."
-      );
-      return false;
-    }
-
-    const { data: existingBookings, error } = await supabase
-      .from("bookings")
-      .select("*")
-      .eq("space_id", parkingSpace.id)
-      .gte("end_time", startTime.toISOString())
-      .lte("start_time", endTime.toISOString());
-
-    if (error) {
-      console.error("Error checking bookings:", error);
-      return false;
-    }
-
-    if (existingBookings && existingBookings.length > 0) {
-      Alert.alert(
-        "Booking Conflict",
-        "This time slot is already booked. Please select different times."
-      );
-      return false;
-    }
-
-    return true;
-  };
-
   const handleBooking = async () => {
     if (!session) {
       Alert.alert("Error", "Please login to book a parking space");
@@ -107,40 +69,38 @@ if (isNaN(availabilityStart.getTime()) || isNaN(availabilityEnd.getTime())) {
     setLoading(true);
 
     try {
-      const isValid = await validateTimeSelection();
-      if (!isValid) {
-        setLoading(false);
+      const validationResult = await validateBookingTime(
+        startTime,
+        endTime,
+        new Date(parkingSpace.availability_start),
+        new Date(parkingSpace.availability_end),
+        parkingSpace.id
+      );
+
+      if (!validationResult.isValid) {
+        Alert.alert("Error", validationResult.error);
         return;
       }
 
-      const hours =
-        (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+      const hours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
       const totalPrice = hours * parkingSpace.price_per_hour;
 
-      const { data, error } = await supabase
-        .from("bookings")
-        .insert([
-          {
-            user_id: session?.user?.id,
-            space_id: parkingSpace.id,
-            start_time: startTime.toISOString(),
-            end_time: endTime.toISOString(),
-            total_price: totalPrice,
-            status: "completed",
-          },
-        ])
-        .select()
-        .single();
+      const bookingData: BookingData = {
+        user_id: session.user.id,
+        space_id: parkingSpace.id,
+        start_time: startTime.toISOString(),
+        end_time: endTime.toISOString(),
+        total_price: totalPrice,
+        status: "completed"
+      };
 
+      const { error } = await createBookingWithValidation(bookingData);
+      
       if (error) throw error;
 
       Alert.alert(
         "Booking Successful! 🎉",
-        `Your parking space has been booked for ${formatDate(
-          startTime.toISOString()
-        )} from ${formatTime(startTime.toISOString())} to ${formatTime(
-          endTime.toISOString()
-        )}`,
+        `Your parking space has been booked for ${formatDate(startTime.toISOString())} from ${formatTime(startTime.toISOString())} to ${formatTime(endTime.toISOString())}`,
         [
           {
             text: "View My Bookings",
@@ -167,7 +127,12 @@ if (isNaN(availabilityStart.getTime()) || isNaN(availabilityEnd.getTime())) {
   };
 
   // iOS specific component
-  const IOSTimePicker = ({ startTime, endTime, handleStartChange, handleEndChange }) => (
+  const IOSTimePicker: React.FC<TimePickerProps> = ({ 
+    startTime, 
+    endTime, 
+    handleStartChange, 
+    handleEndChange 
+  }) => (
     <>
       <View style={styles.timeSection}>
         <Text style={styles.timeSectionTitle}>Start Time</Text>
@@ -198,14 +163,21 @@ if (isNaN(availabilityStart.getTime()) || isNaN(availabilityEnd.getTime())) {
   );
 
   // Android/other platforms component
-  const DefaultTimePicker = ({ startTime, endTime, setShowStartDate, setShowStartTime, setShowEndDate, setShowEndTime }) => (
+  const DefaultTimePicker: React.FC<TimePickerProps> = ({
+    startTime,
+    endTime,
+    setShowStartDate,
+    setShowStartTime,
+    setShowEndDate,
+    setShowEndTime
+  }) => (
     <>
       <View style={styles.timeSection}>
         <Text style={styles.timeSectionTitle}>Start Time</Text>
         <View style={styles.dateTimeContainer}>
           <TouchableOpacity 
             style={styles.dateTimeButton}
-            onPress={() => setShowStartDate(true)}
+            onPress={() => setShowStartDate && setShowStartDate(true)}
           >
             <Ionicons name="calendar-outline" size={20} color="#666" />
             <Text style={styles.dateTimeText}>
@@ -214,7 +186,7 @@ if (isNaN(availabilityStart.getTime()) || isNaN(availabilityEnd.getTime())) {
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.dateTimeButton}
-            onPress={() => setShowStartTime(true)}
+            onPress={() => setShowStartTime && setShowStartTime(true)}
           >
             <Ionicons name="time-outline" size={20} color="#666" />
             <Text style={styles.dateTimeText}>
@@ -229,7 +201,7 @@ if (isNaN(availabilityStart.getTime()) || isNaN(availabilityEnd.getTime())) {
         <View style={styles.dateTimeContainer}>
           <TouchableOpacity 
             style={styles.dateTimeButton}
-            onPress={() => setShowEndDate(true)}
+            onPress={() => setShowEndDate && setShowEndDate(true)}
           >
             <Ionicons name="calendar-outline" size={20} color="#666" />
             <Text style={styles.dateTimeText}>
@@ -238,7 +210,7 @@ if (isNaN(availabilityStart.getTime()) || isNaN(availabilityEnd.getTime())) {
           </TouchableOpacity>
           <TouchableOpacity 
             style={styles.dateTimeButton}
-            onPress={() => setShowEndTime(true)}
+            onPress={() => setShowEndTime && setShowEndTime(true)}
           >
             <Ionicons name="time-outline" size={20} color="#666" />
             <Text style={styles.dateTimeText}>

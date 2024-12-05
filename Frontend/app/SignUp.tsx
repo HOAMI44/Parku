@@ -8,8 +8,8 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { Link, router } from "expo-router";
-import { supabase } from "../lib/supabase";
+import { router } from "expo-router";
+import { signUpWithEmail } from "../hooks/database/queries";
 
 const SignUp = () => {
   const [email, setEmail] = useState("");
@@ -28,14 +28,10 @@ const SignUp = () => {
       setLoading(true);
       setError(null);
 
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
+      const { data, error } = await signUpWithEmail(email, password);
 
       if (error) throw error;
 
-      // Just redirect to verify page with email
       router.replace({
         pathname: "/Verify",
         params: {
@@ -54,7 +50,7 @@ const SignUp = () => {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Sign Up</Text>
-        <Text style={styles.subtitle}>Create a new account</Text>
+        <Text style={styles.subtitle}>Create a new account to be able to book and list parking spaces on Parku!</Text>
       </View>
 
       {/* Email Input */}

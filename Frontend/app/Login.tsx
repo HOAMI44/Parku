@@ -10,7 +10,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { Link, router } from "expo-router";
-import { supabase } from "../lib/supabase";
+import { signInWithEmail } from "../hooks/database/queries";
 import { useAuth } from "../contexts/AuthContext";
 
 const Login = () => {
@@ -34,17 +34,14 @@ const Login = () => {
 
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { data, error} = await signInWithEmail(email, password);
 
       if (error) {
         Alert.alert("Error", error.message);
         return;
       }
 
-      if (data.user) {
+      if (data?.user) {
         router.dismissAll();
         router.push("/(tabs)/Home");
       }
