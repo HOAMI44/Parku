@@ -1,100 +1,108 @@
-import { StyleSheet, Text, TouchableOpacity, View, Image, Dimensions } from "react-native";
-import React from "react";
-import { ParkingSpaceWithName } from "@/types/types";
+import React from 'react';
+import { View, Text, Image, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { ParkingSpaceWithName } from '@/types/types';
+import { formatCurrency } from '@/utils/formatters';
 
 type ParkingSpaceCardProps = {
-  parkingSpace: ParkingSpaceWithName;
-  distance?: string;
+  parkingSpace: ParkingSpaceWithName & { distance?: string };
 };
 
-const ParkingSpaceCard = ({ parkingSpace, distance }: ParkingSpaceCardProps) => {
+const ParkingSpaceCard: React.FC<ParkingSpaceCardProps> = ({ parkingSpace }) => {
   return (
-    <TouchableOpacity style={styles.parkingSpace}>
+    <View style={styles.card}>
       <Image
         source={{ uri: parkingSpace.image_url }}
-        style={styles.parkingImage}
+        style={styles.image}
       />
-      <View style={styles.parkingDetails}>
-        <View style={styles.headerRow}>
-          <Text numberOfLines={1} style={styles.parkingAddress}>
-            {parkingSpace.address}
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <Text style={styles.price}>
+            {formatCurrency(parkingSpace.price_per_hour)}/h
           </Text>
-          {distance && (
-            <Text style={styles.distance}>{distance} km</Text>
+          {parkingSpace.distance && (
+            <Text style={styles.distance}>{parkingSpace.distance} km</Text>
           )}
         </View>
-        <Text
-          numberOfLines={1}
-          style={styles.parkingUserFullName}
-        >{`${parkingSpace.users.first_name} ${parkingSpace.users.last_name}`}</Text>
-        <View style={styles.numbers}>
-          <Text
-            numberOfLines={1}
-            style={styles.parkingPricePerHour}
-          >{`${parkingSpace.price_per_hour} € / h`}</Text>
-          <Text
-            numberOfLines={1}
-            style={styles.dimensions}
-          >{`W: ${parkingSpace.width} | L: ${parkingSpace.length}`}</Text>
+        <Text style={styles.address} numberOfLines={2}>
+          {parkingSpace.address}
+        </Text>
+        <View style={styles.footer}>
+          <View style={styles.dimensions}>
+            <Ionicons name="resize" size={16} color="#666" />
+            <Text style={styles.dimensionsText}>
+              {parkingSpace.width}m × {parkingSpace.length}m
+            </Text>
+          </View>
+          <Text style={styles.owner}>
+            {parkingSpace.users.first_name} {parkingSpace.users.last_name}
+          </Text>
         </View>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 };
 
-export default ParkingSpaceCard;
-
 const styles = StyleSheet.create({
-  parkingSpace: {
-    borderRadius: 10,
+  card: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    marginBottom: 16,
+    overflow: 'hidden',
     elevation: 3,
-    shadowColor: "#000",
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 15,
-    backgroundColor: "white",
+    shadowRadius: 4,
+  },
+  image: {
     width: '100%',
+    height: 160,
+    backgroundColor: '#f0f0f0',
   },
-  parkingImage: {
-    width: "100%",
-    aspectRatio: 21 / 9, // Making it slightly shorter
-    borderTopLeftRadius: 10,
-    borderTopRightRadius: 10,
+  content: {
+    padding: 16,
   },
-  parkingDetails: {
-    padding: 8, // Reduced padding
-  },
-  headerRow: {
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 2,
+    marginBottom: 8,
   },
-  parkingAddress: {
-    fontSize: 14, // Slightly smaller
-    fontWeight: "bold",
-    flex: 1,
+  price: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2196F3',
   },
   distance: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#666',
-    marginLeft: 8,
   },
-  parkingUserFullName: {
-    fontSize: 13, // Slightly smaller
-    color: "#666",
-    marginBottom: 2,
+  address: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+    marginBottom: 8,
   },
-  parkingPricePerHour: {
-    fontSize: 13, // Slightly smaller
-    fontWeight: "500",
-    color: "#2E8B57",
-  },
-  numbers: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   dimensions: {
-    fontSize: 13, // Slightly smaller
-    fontWeight: "500",
-  }
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  dimensionsText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  owner: {
+    fontSize: 14,
+    color: '#666',
+    fontStyle: 'italic',
+  },
 });
+
+export default ParkingSpaceCard;

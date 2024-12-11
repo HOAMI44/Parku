@@ -109,6 +109,13 @@ const HomeScreen = (): JSX.Element => {
     }
   }, [userLocation, parkingSpaces]);
 
+  const handleCardPress = (parkingSpace: ParkingSpaceWithName) => {
+    router.push({
+      pathname: '/ParkingDetails',
+      params: { parkingSpace: JSON.stringify(parkingSpace) }
+    });
+  };
+
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -151,6 +158,7 @@ const HomeScreen = (): JSX.Element => {
             : undefined
         }))}
         noResultsText="No parking spaces match your filter criteria."
+        onCardPress={handleCardPress}
       />
       <FilterPopup
         visible={filterVisible}

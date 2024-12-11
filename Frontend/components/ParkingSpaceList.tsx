@@ -1,61 +1,59 @@
-import { FlatList, StyleSheet, Text, View } from "react-native";
-import React from "react";
-import { ParkingSpaceWithName } from "@/types/types";
-import ParkingSpaceCard from "./ParkingSpaceCard";
+import React from 'react';
+import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
+import { ParkingSpaceWithName } from '@/types/types';
+import ParkingSpaceCard from './ParkingSpaceCard';
 
-type ParkingSpaceListProps = {
-  parkingSpaces: (ParkingSpaceWithName & { distance?: string })[] | null;
-  noResultsText?: string;
+export type ParkingSpaceListProps = {
+  parkingSpaces: (ParkingSpaceWithName & { distance?: string })[];
+  noResultsText: string;
+  onCardPress?: (parkingSpace: ParkingSpaceWithName) => void;
 };
 
-const ParkingSpaceList = ({
+const ParkingSpaceList: React.FC<ParkingSpaceListProps> = ({
   parkingSpaces,
   noResultsText,
-}: ParkingSpaceListProps) => {
+  onCardPress
+}) => {
+  if (!parkingSpaces.length) {
+    return (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyText}>{noResultsText}</Text>
+      </View>
+    );
+  }
+
   return (
-    <>
-      {!parkingSpaces || parkingSpaces.length === 0 ? (
-        <View style={styles.noResultsContainer}>
-          <Text style={styles.noResultsText}>
-            {noResultsText ?? "No parking spaces found"}
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={parkingSpaces}
-          renderItem={({ item }) => (
-            <ParkingSpaceCard 
-              parkingSpace={item} 
-              distance={item.distance}
-            />
-          )}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listStyle}
-        />
+    <FlatList
+      data={parkingSpaces}
+      keyExtractor={(item) => item.id}
+      renderItem={({ item }) => (
+        <TouchableOpacity 
+          onPress={() => onCardPress?.(item)}
+          activeOpacity={0.7}
+        >
+          <ParkingSpaceCard parkingSpace={item} />
+        </TouchableOpacity>
       )}
-    </>
+      contentContainerStyle={styles.listContainer}
+    />
   );
 };
 
-export default ParkingSpaceList;
-
 const styles = StyleSheet.create({
-  noResultsContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 10,
-  },
-  noResultsText: {
-    fontSize: 20,
-    color: "#666",
-    fontWeight: "bold",
-    textAlign: "center",
-  },
-  listStyle: {
-    display: "flex",
-    gap: 15,
+  listContainer: {
     padding: 15,
-    paddingTop: 0,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 });
+
+export default ParkingSpaceList;
